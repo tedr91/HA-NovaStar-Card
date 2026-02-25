@@ -377,9 +377,15 @@ class NovastarHSeriesCardEditor extends LitElement {
           .configValue=${"title"}
           @input=${this.handleInputChanged}
         ></ha-textfield>
+        <ha-textfield
+          label="Device ID"
+          .value=${this.config.device_id ?? ""}
+          .configValue=${"device_id"}
+          @input=${this.handleInputChanged}
+        ></ha-textfield>
         <ha-device-picker
           .hass=${this.hass}
-          label="Device (recommended)"
+          label="Device picker (optional)"
           .value=${this.config.device_id ?? ""}
           .configValue=${"device_id"}
           @value-changed=${this.handleEntityChanged}
