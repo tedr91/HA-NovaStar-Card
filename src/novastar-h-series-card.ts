@@ -40,6 +40,8 @@ export class NovastarHSeriesCard extends LitElement {
   public hass?: HomeAssistant;
 
   private config?: NovastarCardConfig;
+  private optimisticPowerEntityId?: string;
+  private optimisticPowerState?: "on" | "off";
   private resolvedEntities: ResolvedEntityMap = {};
   private resolvedDeviceId?: string;
   private resolvingDeviceId?: string;
@@ -73,6 +75,7 @@ export class NovastarHSeriesCard extends LitElement {
 
   protected updated(): void {
     void this.ensureResolvedEntities();
+    this.syncOptimisticPowerState();
   }
 
   protected render() {
@@ -103,7 +106,10 @@ export class NovastarHSeriesCard extends LitElement {
     const temperatureEntityId = this.getEntityId("temperature_entity");
 
     const powerEntity = this.hass.states[powerEntityId];
-    const powerIsOn = powerEntity?.state === "on";
+    const powerState = this.optimisticPowerEntityId === powerEntityId && this.optimisticPowerState
+      ? this.optimisticPowerState
+      : powerEntity?.state;
+    const powerIsOn = powerState === "on";
     const brightnessDisabled = Boolean(powerEntity) && !powerIsOn;
 
     const statusEntity = statusEntityId
@@ -348,11 +354,38 @@ export class NovastarHSeriesCard extends LitElement {
 
     const target = event.target as HTMLInputElement;
     const isOn = target.checked;
+    this.optimisticPowerEntityId = powerEntityId;
+    this.optimisticPowerState = isOn ? "on" : "off";
+    this.requestUpdate();
 
     const service = isOn ? "turn_on" : "turn_off";
-    await this.hass.callService?.("switch", service, {
-      entity_id: powerEntityId
-    });
+    try {
+      await this.hass.callService?.("switch", service, {
+        entity_id: powerEntityId
+      });
+    } catch {
+      this.optimisticPowerEntityId = undefined;
+      this.optimisticPowerState = undefined;
+      this.requestUpdate();
+    }
+  }
+
+  private syncOptimisticPowerState(): void {
+    if (!this.hass || !this.optimisticPowerEntityId || !this.optimisticPowerState) {
+      return;
+    }
+
+    const powerEntity = this.hass.states[this.optimisticPowerEntityId];
+    if (!powerEntity) {
+      this.optimisticPowerEntityId = undefined;
+      this.optimisticPowerState = undefined;
+      return;
+    }
+
+    if (powerEntity.state === this.optimisticPowerState) {
+      this.optimisticPowerEntityId = undefined;
+      this.optimisticPowerState = undefined;
+    }
   }
 
   private getEntityId(key: keyof ResolvedEntityMap): string | undefined {
