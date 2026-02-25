@@ -7,6 +7,7 @@ type HassEntity = {
 
 type HomeAssistant = {
   states: Record<string, HassEntity>;
+  callService?: (domain: string, service: string, serviceData?: Record<string, unknown>) => Promise<void>;
 };
 
 type NovastarCardConfig = {
@@ -79,6 +80,11 @@ export class NovastarHSeriesCard extends LitElement {
     const temperatureEntity = this.config.temperature_entity
       ? this.hass.states[this.config.temperature_entity]
       : undefined;
+    const brightnessValue = brightnessEntity ? Number.parseFloat(brightnessEntity.state) : Number.NaN;
+    const brightnessMin = brightnessEntity ? this.readNumberAttribute(brightnessEntity, "min", 0) : 0;
+    const brightnessMax = brightnessEntity ? this.readNumberAttribute(brightnessEntity, "max", 100) : 100;
+    const brightnessStep = brightnessEntity ? this.readNumberAttribute(brightnessEntity, "step", 1) : 1;
+    const showBrightnessSlider = brightnessEntity && Number.isFinite(brightnessValue);
 
     return html`
       <ha-card>
@@ -92,7 +98,25 @@ export class NovastarHSeriesCard extends LitElement {
             ? html`<div class="row"><span class="label">Status</span><span class="value">${statusEntity.state}</span></div>`
             : nothing}
           ${brightnessEntity
-            ? html`<div class="row"><span class="label">Brightness</span><span class="value">${brightnessEntity.state}</span></div>`
+            ? showBrightnessSlider
+              ? html`
+                  <div class="brightness-row">
+                    <div class="brightness-header">
+                      <span class="label">Brightness</span>
+                      <span class="value">${Math.round(brightnessValue)}%</span>
+                    </div>
+                    <input
+                      class="brightness-slider"
+                      type="range"
+                      min=${brightnessMin}
+                      max=${brightnessMax}
+                      step=${brightnessStep}
+                      .value=${String(brightnessValue)}
+                      @change=${this.handleBrightnessChanged}
+                    />
+                  </div>
+                `
+              : html`<div class="row"><span class="label">Brightness</span><span class="value">${brightnessEntity.state}</span></div>`
             : nothing}
           ${temperatureEntity
             ? html`<div class="row"><span class="label">Temperature</span><span class="value">${temperatureEntity.state}</span></div>`
@@ -133,7 +157,56 @@ export class NovastarHSeriesCard extends LitElement {
       font-weight: 500;
       text-transform: capitalize;
     }
+
+    .brightness-row {
+      margin-bottom: 8px;
+    }
+
+    .brightness-header {
+      align-items: center;
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 6px;
+    }
+
+    .brightness-slider {
+      box-sizing: border-box;
+      width: 100%;
+    }
   `;
+
+  private readNumberAttribute(entity: HassEntity, key: string, fallbackValue: number): number {
+    const rawValue = entity.attributes[key];
+    if (typeof rawValue === "number" && Number.isFinite(rawValue)) {
+      return rawValue;
+    }
+
+    if (typeof rawValue === "string") {
+      const parsedValue = Number.parseFloat(rawValue);
+      if (Number.isFinite(parsedValue)) {
+        return parsedValue;
+      }
+    }
+
+    return fallbackValue;
+  }
+
+  private async handleBrightnessChanged(event: Event): Promise<void> {
+    if (!this.hass || !this.config?.brightness_entity) {
+      return;
+    }
+
+    const target = event.target as HTMLInputElement;
+    const nextValue = Number.parseFloat(target.value);
+    if (!Number.isFinite(nextValue)) {
+      return;
+    }
+
+    await this.hass.callService?.("number", "set_value", {
+      entity_id: this.config.brightness_entity,
+      value: nextValue
+    });
+  }
 }
 
 class NovastarHSeriesCardEditor extends LitElement {
@@ -219,11 +292,20 @@ class NovastarHSeriesCardEditor extends LitElement {
       return;
     }
 
+    if (!event.detail || event.detail.value === undefined) {
+      return;
+    }
+
     const nextValue = event.detail.value?.trim() ?? "";
     this.updateConfigValue(configValue, nextValue);
   }
 
   private updateConfigValue(configValue: keyof NovastarCardConfig, nextValue: string): void {
+    const currentValue = (this.config[configValue] as string | undefined) ?? "";
+    if (currentValue === nextValue) {
+      return;
+    }
+
     const nextConfig: NovastarCardConfig = { ...this.config };
 
     if (nextValue) {
