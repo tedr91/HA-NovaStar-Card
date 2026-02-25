@@ -104,6 +104,7 @@ export class NovastarHSeriesCard extends LitElement {
 
     const powerEntity = this.hass.states[powerEntityId];
     const powerIsOn = powerEntity?.state === "on";
+    const brightnessDisabled = Boolean(powerEntity) && !powerIsOn;
 
     const statusEntity = statusEntityId
       ? this.hass.states[statusEntityId]
@@ -138,10 +139,9 @@ export class NovastarHSeriesCard extends LitElement {
                       max=${brightnessMax}
                       step=${brightnessStep}
                       .value=${String(brightnessValue)}
-                      ?disabled=${powerEntity ? !powerIsOn : false}
+                      .disabled=${brightnessDisabled}
                       @change=${this.handleBrightnessChanged}
                     />
-                    <span class="header-brightness-value">${Math.round(brightnessValue)}%</span>
                   </div>
                 `
               : nothing}
@@ -230,19 +230,11 @@ export class NovastarHSeriesCard extends LitElement {
     .header-brightness {
       align-items: center;
       display: inline-flex;
-      gap: 8px;
-      min-width: 170px;
+      min-width: 120px;
     }
 
     .header-brightness-slider {
       width: 120px;
-    }
-
-    .header-brightness-value {
-      color: var(--secondary-text-color);
-      font-size: 0.85rem;
-      min-width: 36px;
-      text-align: right;
     }
 
     .brightness-header {
@@ -318,6 +310,12 @@ export class NovastarHSeriesCard extends LitElement {
 
   private async handleBrightnessChanged(event: Event): Promise<void> {
     if (!this.hass) {
+      return;
+    }
+
+    const powerEntityId = this.getEntityId("power_entity") ?? "switch.novastar_h2_power_screen_output";
+    const powerEntity = this.hass.states[powerEntityId];
+    if (powerEntity && powerEntity.state !== "on") {
       return;
     }
 
