@@ -125,25 +125,26 @@ export class NovastarHSeriesCard extends LitElement {
 
     return html`
       <ha-card>
-        <div class="header">${this.config.title ?? "Novastar H Series"}</div>
+        <div class="header-row">
+          <div class="header">${this.config.title ?? "Novastar H Series"}</div>
+          ${powerEntity
+            ? html`
+                <label class="power-toggle" title="Toggle screen output">
+                  <input
+                    type="checkbox"
+                    .checked=${powerIsOn}
+                    @change=${this.handlePowerToggle}
+                  />
+                  <span class="power-slider"></span>
+                </label>
+              `
+            : nothing}
+        </div>
         <div class="content">
           <div class="row">
             <span class="label">Controller</span>
             <span class="value">${controllerValue}</span>
           </div>
-          ${powerEntity
-            ? html`
-                <div class="row">
-                  <span class="label">Power</span>
-                  <button
-                    class="power-button ${powerIsOn ? "on" : "off"}"
-                    @click=${this.handlePowerToggle}
-                  >
-                    ${powerIsOn ? "On" : "Off"}
-                  </button>
-                </div>
-              `
-            : nothing}
           ${temperatureEntity
             ? html`<div class="row"><span class="label">Temperature</span><span class="value">${temperatureEntity.state}</span></div>`
             : nothing}
@@ -174,10 +175,16 @@ export class NovastarHSeriesCard extends LitElement {
   }
 
   static styles = css`
+    .header-row {
+      align-items: center;
+      display: flex;
+      justify-content: space-between;
+      padding: 16px 16px 0;
+    }
+
     .header {
       font-size: 1rem;
       font-weight: 600;
-      padding: 16px 16px 0;
     }
 
     .content {
@@ -221,24 +228,46 @@ export class NovastarHSeriesCard extends LitElement {
       width: 100%;
     }
 
-    .power-button {
-      border: 1px solid var(--divider-color);
-      border-radius: 16px;
-      color: var(--primary-text-color);
+    .power-toggle {
+      display: inline-flex;
+      height: 22px;
+      position: relative;
+      width: 40px;
+    }
+
+    .power-toggle input {
+      height: 0;
+      opacity: 0;
+      width: 0;
+    }
+
+    .power-slider {
+      background-color: var(--disabled-color);
+      border-radius: 999px;
       cursor: pointer;
-      font: inherit;
-      min-width: 64px;
-      padding: 4px 12px;
+      inset: 0;
+      position: absolute;
+      transition: 0.2s;
     }
 
-    .power-button.on {
-      background: var(--success-color, var(--primary-color));
-      border-color: var(--success-color, var(--primary-color));
-      color: var(--text-primary-color, #fff);
+    .power-slider::before {
+      background-color: var(--card-background-color);
+      border-radius: 50%;
+      content: "";
+      height: 16px;
+      left: 3px;
+      position: absolute;
+      top: 3px;
+      transition: 0.2s;
+      width: 16px;
     }
 
-    .power-button.off {
-      background: var(--card-background-color);
+    .power-toggle input:checked + .power-slider {
+      background-color: var(--success-color, var(--primary-color));
+    }
+
+    .power-toggle input:checked + .power-slider::before {
+      transform: translateX(18px);
     }
   `;
 
@@ -280,18 +309,20 @@ export class NovastarHSeriesCard extends LitElement {
     });
   }
 
-  private async handlePowerToggle(): Promise<void> {
+  private async handlePowerToggle(event: Event): Promise<void> {
     if (!this.hass) {
       return;
     }
 
     const powerEntityId = this.getEntityId("power_entity") ?? "switch.novastar_h2_power_screen_output";
-    const powerEntity = this.hass.states[powerEntityId];
-    if (!powerEntity) {
+    if (!this.hass.states[powerEntityId]) {
       return;
     }
 
-    const service = powerEntity.state === "on" ? "turn_off" : "turn_on";
+    const target = event.target as HTMLInputElement;
+    const isOn = target.checked;
+
+    const service = isOn ? "turn_on" : "turn_off";
     await this.hass.callService?.("switch", service, {
       entity_id: powerEntityId
     });
