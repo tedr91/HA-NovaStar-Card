@@ -40,7 +40,6 @@ export class NovastarHSeriesCard extends LitElement {
   public hass?: HomeAssistant;
 
   private config?: NovastarCardConfig;
-  private optimisticPowerEntityId?: string;
   private optimisticPowerState?: "on" | "off";
   private resolvedEntities: ResolvedEntityMap = {};
   private resolvedDeviceId?: string;
@@ -106,9 +105,7 @@ export class NovastarHSeriesCard extends LitElement {
     const temperatureEntityId = this.getEntityId("temperature_entity");
 
     const powerEntity = this.hass.states[powerEntityId];
-    const powerState = this.optimisticPowerEntityId === powerEntityId && this.optimisticPowerState
-      ? this.optimisticPowerState
-      : powerEntity?.state;
+    const powerState = this.optimisticPowerState ?? powerEntity?.state;
     const powerIsOn = powerState === "on";
     const brightnessDisabled = Boolean(powerEntity) && !powerIsOn;
 
@@ -146,6 +143,7 @@ export class NovastarHSeriesCard extends LitElement {
                       step=${brightnessStep}
                       .value=${String(brightnessValue)}
                       .disabled=${brightnessDisabled}
+                      ?disabled=${brightnessDisabled}
                       @change=${this.handleBrightnessChanged}
                     />
                   </div>
@@ -255,6 +253,11 @@ export class NovastarHSeriesCard extends LitElement {
       width: 100%;
     }
 
+    .brightness-slider:disabled {
+      opacity: 0.45;
+      pointer-events: none;
+    }
+
     .power-toggle {
       display: inline-flex;
       height: 22px;
@@ -354,7 +357,6 @@ export class NovastarHSeriesCard extends LitElement {
 
     const target = event.target as HTMLInputElement;
     const isOn = target.checked;
-    this.optimisticPowerEntityId = powerEntityId;
     this.optimisticPowerState = isOn ? "on" : "off";
     this.requestUpdate();
 
@@ -364,26 +366,24 @@ export class NovastarHSeriesCard extends LitElement {
         entity_id: powerEntityId
       });
     } catch {
-      this.optimisticPowerEntityId = undefined;
       this.optimisticPowerState = undefined;
       this.requestUpdate();
     }
   }
 
   private syncOptimisticPowerState(): void {
-    if (!this.hass || !this.optimisticPowerEntityId || !this.optimisticPowerState) {
+    if (!this.hass || !this.optimisticPowerState) {
       return;
     }
 
-    const powerEntity = this.hass.states[this.optimisticPowerEntityId];
+    const powerEntityId = this.getEntityId("power_entity") ?? "switch.novastar_h2_power_screen_output";
+    const powerEntity = this.hass.states[powerEntityId];
     if (!powerEntity) {
-      this.optimisticPowerEntityId = undefined;
       this.optimisticPowerState = undefined;
       return;
     }
 
     if (powerEntity.state === this.optimisticPowerState) {
-      this.optimisticPowerEntityId = undefined;
       this.optimisticPowerState = undefined;
     }
   }
