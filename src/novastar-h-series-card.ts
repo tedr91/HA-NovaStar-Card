@@ -8,12 +8,21 @@ type HassEntity = {
 type HomeAssistant = {
   states: Record<string, HassEntity>;
   callService?: (domain: string, service: string, serviceData?: Record<string, unknown>) => Promise<void>;
+  callWS?: (message: Record<string, unknown>) => Promise<unknown>;
 };
 
 type NovastarCardConfig = {
   type: string;
   title?: string;
-  controller_entity: string;
+  device_id?: string;
+  controller_entity?: string;
+  status_entity?: string;
+  brightness_entity?: string;
+  temperature_entity?: string;
+};
+
+type ResolvedEntityMap = {
+  controller_entity?: string;
   status_entity?: string;
   brightness_entity?: string;
   temperature_entity?: string;
@@ -29,6 +38,10 @@ export class NovastarHSeriesCard extends LitElement {
   public hass?: HomeAssistant;
 
   private config?: NovastarCardConfig;
+  private resolvedEntities: ResolvedEntityMap = {};
+  private resolvedDeviceId?: string;
+  private resolvingDeviceId?: string;
+  private resolvedForHass?: HomeAssistant;
 
   static properties = {
     hass: { attribute: false },
@@ -52,9 +65,12 @@ export class NovastarHSeriesCard extends LitElement {
   public static getStubConfig(): NovastarCardConfig {
     return {
       type: "custom:novastar-h-series-card",
-      title: "Novastar H Series",
-      controller_entity: ""
+      title: "Novastar H Series"
     };
+  }
+
+  protected updated(): void {
+    void this.ensureResolvedEntities();
   }
 
   protected render() {
@@ -66,19 +82,31 @@ export class NovastarHSeriesCard extends LitElement {
       return html`<ha-card><div class="content">Home Assistant context is unavailable.</div></ha-card>`;
     }
 
-    const controller = this.hass.states[this.config.controller_entity];
-    if (!controller) {
-      return html`<ha-card><div class="content">Entity not found: ${this.config.controller_entity}</div></ha-card>`;
+    const controllerEntityId = this.getEntityId("controller_entity");
+    if (!controllerEntityId) {
+      const loadingMessage = this.config.device_id && this.resolvingDeviceId === this.config.device_id
+        ? "Resolving entities for selected device..."
+        : "Set a device_id or controller_entity in card configuration.";
+      return html`<ha-card><div class="content">${loadingMessage}</div></ha-card>`;
     }
 
-    const statusEntity = this.config.status_entity
-      ? this.hass.states[this.config.status_entity]
+    const controller = this.hass.states[controllerEntityId];
+    if (!controller) {
+      return html`<ha-card><div class="content">Entity not found: ${controllerEntityId}</div></ha-card>`;
+    }
+
+    const statusEntityId = this.getEntityId("status_entity");
+    const brightnessEntityId = this.getEntityId("brightness_entity");
+    const temperatureEntityId = this.getEntityId("temperature_entity");
+
+    const statusEntity = statusEntityId
+      ? this.hass.states[statusEntityId]
       : undefined;
-    const brightnessEntity = this.config.brightness_entity
-      ? this.hass.states[this.config.brightness_entity]
+    const brightnessEntity = brightnessEntityId
+      ? this.hass.states[brightnessEntityId]
       : undefined;
-    const temperatureEntity = this.config.temperature_entity
-      ? this.hass.states[this.config.temperature_entity]
+    const temperatureEntity = temperatureEntityId
+      ? this.hass.states[temperatureEntityId]
       : undefined;
     const brightnessValue = brightnessEntity ? Number.parseFloat(brightnessEntity.state) : Number.NaN;
     const brightnessMin = brightnessEntity ? this.readNumberAttribute(brightnessEntity, "min", 0) : 0;
@@ -192,7 +220,12 @@ export class NovastarHSeriesCard extends LitElement {
   }
 
   private async handleBrightnessChanged(event: Event): Promise<void> {
-    if (!this.hass || !this.config?.brightness_entity) {
+    if (!this.hass) {
+      return;
+    }
+
+    const brightnessEntityId = this.getEntityId("brightness_entity");
+    if (!brightnessEntityId) {
       return;
     }
 
@@ -203,9 +236,113 @@ export class NovastarHSeriesCard extends LitElement {
     }
 
     await this.hass.callService?.("number", "set_value", {
-      entity_id: this.config.brightness_entity,
+      entity_id: brightnessEntityId,
       value: nextValue
     });
+  }
+
+  private getEntityId(key: keyof ResolvedEntityMap): string | undefined {
+    const configuredValue = this.config?.[key];
+    if (configuredValue && configuredValue.trim()) {
+      return configuredValue;
+    }
+
+    const resolvedValue = this.resolvedEntities[key];
+    if (resolvedValue && resolvedValue.trim()) {
+      return resolvedValue;
+    }
+
+    return undefined;
+  }
+
+  private async ensureResolvedEntities(): Promise<void> {
+    if (!this.hass || !this.config) {
+      return;
+    }
+
+    const deviceId = this.config.device_id?.trim();
+    if (!deviceId) {
+      if (this.resolvedDeviceId || Object.keys(this.resolvedEntities).length > 0) {
+        this.resolvedEntities = {};
+        this.resolvedDeviceId = undefined;
+        this.resolvedForHass = undefined;
+        this.requestUpdate();
+      }
+      return;
+    }
+
+    if (!this.hass.callWS) {
+      return;
+    }
+
+    if (this.resolvingDeviceId === deviceId) {
+      return;
+    }
+
+    if (this.resolvedDeviceId === deviceId && this.resolvedForHass === this.hass) {
+      return;
+    }
+
+    this.resolvingDeviceId = deviceId;
+    try {
+      const registry = await this.hass.callWS({ type: "config/entity_registry/list" });
+      if (!Array.isArray(registry)) {
+        return;
+      }
+
+      const entityIds = registry
+        .filter((entry) => {
+          if (!entry || typeof entry !== "object") {
+            return false;
+          }
+
+          const item = entry as Record<string, unknown>;
+          return item.device_id === deviceId
+            && !item.disabled_by
+            && !item.hidden_by
+            && typeof item.entity_id === "string";
+        })
+        .map((entry) => (entry as Record<string, unknown>).entity_id as string);
+
+      const nextResolved: ResolvedEntityMap = {
+        controller_entity: this.pickEntity(entityIds, [/_device_status$/], ["sensor"]),
+        status_entity: this.pickEntity(entityIds, [/_signal_status$/], ["sensor"]),
+        brightness_entity: this.pickEntity(entityIds, [/_brightness$/], ["number", "sensor"]),
+        temperature_entity: this.pickEntity(entityIds, [/_temperature_status$/, /_temp_status$/], ["sensor"])
+      };
+
+      nextResolved.controller_entity ||= this.pickEntity(entityIds, [/^media_player\./], ["media_player"]);
+      nextResolved.controller_entity ||= this.pickEntity(entityIds, [/_status$/], ["sensor"]);
+
+      this.resolvedEntities = nextResolved;
+      this.resolvedDeviceId = deviceId;
+      this.resolvedForHass = this.hass;
+      this.requestUpdate();
+    } catch {
+    } finally {
+      if (this.resolvingDeviceId === deviceId) {
+        this.resolvingDeviceId = undefined;
+      }
+    }
+  }
+
+  private pickEntity(entityIds: string[], patterns: RegExp[], domains: string[]): string | undefined {
+    for (const pattern of patterns) {
+      const patternMatch = entityIds.find((entityId) => pattern.test(entityId));
+      if (patternMatch) {
+        return patternMatch;
+      }
+    }
+
+    for (const domain of domains) {
+      const domainPrefix = `${domain}.`;
+      const domainMatch = entityIds.find((entityId) => entityId.startsWith(domainPrefix));
+      if (domainMatch) {
+        return domainMatch;
+      }
+    }
+
+    return undefined;
   }
 }
 
@@ -213,8 +350,7 @@ class NovastarHSeriesCardEditor extends LitElement {
   public hass?: HomeAssistant;
 
   private config: NovastarCardConfig = {
-    type: "custom:novastar-h-series-card",
-    controller_entity: ""
+    type: "custom:novastar-h-series-card"
   };
 
   static properties = {
@@ -225,7 +361,6 @@ class NovastarHSeriesCardEditor extends LitElement {
   public setConfig(config: NovastarCardConfig): void {
     const nextConfig: NovastarCardConfig = { ...config };
     nextConfig.type ||= "custom:novastar-h-series-card";
-    nextConfig.controller_entity ||= "";
     this.config = nextConfig;
   }
 
@@ -242,9 +377,16 @@ class NovastarHSeriesCardEditor extends LitElement {
           .configValue=${"title"}
           @input=${this.handleInputChanged}
         ></ha-textfield>
+        <ha-device-picker
+          .hass=${this.hass}
+          label="Device (recommended)"
+          .value=${this.config.device_id ?? ""}
+          .configValue=${"device_id"}
+          @value-changed=${this.handleEntityChanged}
+        ></ha-device-picker>
         <ha-entity-picker
           .hass=${this.hass}
-          label="Controller entity (required)"
+          label="Controller entity (optional override)"
           .value=${this.config.controller_entity ?? ""}
           .configValue=${"controller_entity"}
           @value-changed=${this.handleEntityChanged}
@@ -355,5 +497,5 @@ window.customCards = window.customCards || [];
 window.customCards.push({
   type: "novastar-h-series-card",
   name: "Novastar H Series Card",
-  description: "Displays core status information for a Novastar H Series controller."
+  description: "Displays core status information for a Novastar H Series controller from device or entity config."
 });
