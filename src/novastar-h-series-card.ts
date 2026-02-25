@@ -196,19 +196,26 @@ export class NovastarHSeriesCard extends LitElement {
                 `
               : html`<div class="row"><span class="label">Preset</span><span class="value">${presetEntity.state}</span></div>`
             : nothing}
-          ${layerSourceRows.map((row) => html`
-            <div class="row input-row">
-              <span class="label">Layer ${row.layerNumber} Source</span>
-              <select
-                class="input-select"
-                data-entity-id=${row.entityId}
-                .value=${this.resolveSelectedOption(row.entity, row.options)}
-                @change=${this.handleLayerSourceChanged}
-              >
-                ${row.options.map((option) => html`<option .value=${option}>${option}</option>`)}
-              </select>
-            </div>
-          `)}
+          ${layerSourceRows.map((row) => {
+            const selectedOption = this.resolveSelectedOption(row.entity, row.options);
+            return html`
+              <div class="row input-row">
+                <span class="label">Layer ${row.layerNumber} Source</span>
+                <select
+                  class="input-select"
+                  data-entity-id=${row.entityId}
+                  @change=${this.handleLayerSourceChanged}
+                >
+                  ${row.options.map((option) => html`
+                    <option
+                      .value=${option}
+                      ?selected=${this.optionEquals(option, selectedOption)}
+                    >${option}</option>
+                  `)}
+                </select>
+              </div>
+            `;
+          })}
           ${brightnessEntity
             ? showBrightnessSlider
               ? nothing
@@ -417,6 +424,16 @@ export class NovastarHSeriesCard extends LitElement {
 
     const trimmed = value.trim();
     return trimmed || undefined;
+  }
+
+  private optionEquals(left: string, right: string): boolean {
+    if (left === right) {
+      return true;
+    }
+
+    const normalizedLeft = left.trim().toLowerCase();
+    const normalizedRight = right.trim().toLowerCase();
+    return normalizedLeft === normalizedRight;
   }
 
   private getLayerSourceRows(): Array<{ entityId: string; entity: HassEntity; layerNumber: number; options: string[] }> {
