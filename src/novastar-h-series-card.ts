@@ -16,7 +16,7 @@ type NovastarCardConfig = {
   title?: string;
   device_id?: string;
   power_entity?: string;
-  input_entity?: string;
+  preset_entity?: string;
   controller_entity?: string;
   status_entity?: string;
   brightness_entity?: string;
@@ -25,7 +25,7 @@ type NovastarCardConfig = {
 
 type ResolvedEntityMap = {
   power_entity?: string;
-  input_entity?: string;
+  preset_entity?: string;
   controller_entity?: string;
   status_entity?: string;
   brightness_entity?: string;
@@ -103,7 +103,7 @@ export class NovastarHSeriesCard extends LitElement {
     }
 
     const powerEntityId = this.getEntityId("power_entity") ?? "switch.novastar_h2_power_screen_output";
-    const inputEntityId = this.getEntityId("input_entity");
+    const presetEntityId = this.getEntityId("preset_entity");
     const statusEntityId = this.getEntityId("status_entity");
     const brightnessEntityId = this.getEntityId("brightness_entity");
     const temperatureEntityId = this.getEntityId("temperature_entity");
@@ -116,8 +116,8 @@ export class NovastarHSeriesCard extends LitElement {
     const statusEntity = statusEntityId
       ? this.hass.states[statusEntityId]
       : undefined;
-    const inputEntity = inputEntityId
-      ? this.hass.states[inputEntityId]
+    const presetEntity = presetEntityId
+      ? this.hass.states[presetEntityId]
       : undefined;
     const brightnessEntity = brightnessEntityId
       ? this.hass.states[brightnessEntityId]
@@ -130,7 +130,7 @@ export class NovastarHSeriesCard extends LitElement {
     const brightnessMax = brightnessEntity ? this.readNumberAttribute(brightnessEntity, "max", 100) : 100;
     const brightnessStep = brightnessEntity ? this.readNumberAttribute(brightnessEntity, "step", 1) : 1;
     const showBrightnessSlider = brightnessEntity && Number.isFinite(brightnessValue);
-    const inputOptions = this.readStringListAttribute(inputEntity, "options");
+    const presetOptions = this.readStringListAttribute(presetEntity, "options");
     const layerSourceRows = this.getLayerSourceRows();
     const controllerValue = statusEntity
       ? `${controller.state} (${statusEntity.state})`
@@ -180,21 +180,21 @@ export class NovastarHSeriesCard extends LitElement {
           ${temperatureEntity
             ? html`<div class="row"><span class="label">Temperature</span><span class="value">${temperatureEntity.state}</span></div>`
             : nothing}
-          ${inputEntity
-            ? inputOptions.length > 0
+          ${presetEntity
+            ? presetOptions.length > 0
               ? html`
                   <div class="row input-row">
                     <span class="label">Preset</span>
                     <select
                       class="input-select"
-                      .value=${inputEntity.state}
-                      @change=${this.handleInputSelectionChanged}
+                      .value=${presetEntity.state}
+                      @change=${this.handlePresetSelectionChanged}
                     >
-                      ${inputOptions.map((option) => html`<option .value=${option}>${option}</option>`) }
+                      ${presetOptions.map((option) => html`<option .value=${option}>${option}</option>`) }
                     </select>
                   </div>
                 `
-              : html`<div class="row"><span class="label">Preset</span><span class="value">${inputEntity.state}</span></div>`
+              : html`<div class="row"><span class="label">Preset</span><span class="value">${presetEntity.state}</span></div>`
             : nothing}
           ${layerSourceRows.map((row) => html`
             <div class="row input-row">
@@ -481,13 +481,13 @@ export class NovastarHSeriesCard extends LitElement {
     }
   }
 
-  private async handleInputSelectionChanged(event: Event): Promise<void> {
+  private async handlePresetSelectionChanged(event: Event): Promise<void> {
     if (!this.hass) {
       return;
     }
 
-    const inputEntityId = this.getEntityId("input_entity");
-    if (!inputEntityId) {
+    const presetEntityId = this.getEntityId("preset_entity");
+    if (!presetEntityId) {
       return;
     }
 
@@ -498,7 +498,7 @@ export class NovastarHSeriesCard extends LitElement {
     }
 
     await this.hass.callService?.("select", "select_option", {
-      entity_id: inputEntityId,
+      entity_id: presetEntityId,
       option
     });
   }
@@ -609,7 +609,7 @@ export class NovastarHSeriesCard extends LitElement {
 
       const nextResolved: ResolvedEntityMap = {
         power_entity: this.pickEntity(entityIds, [/_power_screen_output$/, /_screen_output$/], ["switch"]),
-        input_entity: this.pickEntity(entityIds, [/_layer_\d+_source$/, /_input(_selection)?$/, /_preset$/], ["select"]),
+        preset_entity: this.pickEntity(entityIds, [/_preset$/, /_layer_\d+_source$/], ["select"]),
         controller_entity: this.pickEntity(entityIds, [/_device_status$/], ["sensor"]),
         status_entity: this.pickEntity(entityIds, [/_signal_status$/], ["sensor"]),
         brightness_entity: this.pickEntity(entityIds, [/_brightness$/], ["number", "sensor"]),
@@ -682,7 +682,7 @@ class NovastarHSeriesCardEditor extends LitElement {
     }
     this.showOverrides = Boolean(
       nextConfig.power_entity
-      || nextConfig.input_entity
+      || nextConfig.preset_entity
       || nextConfig.controller_entity
       || nextConfig.status_entity
       || nextConfig.brightness_entity
@@ -751,8 +751,8 @@ class NovastarHSeriesCardEditor extends LitElement {
             <ha-entity-picker
               .hass=${this.hass}
               label="Preset selection entity (optional override)"
-              .value=${this.config.input_entity ?? ""}
-              .configValue=${"input_entity"}
+              .value=${this.config.preset_entity ?? ""}
+              .configValue=${"preset_entity"}
               @value-changed=${this.handleEntityChanged}
             ></ha-entity-picker>
             <ha-entity-picker
