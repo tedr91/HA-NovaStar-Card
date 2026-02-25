@@ -1,5 +1,4 @@
 import { LitElement, css, html, nothing } from "lit";
-import { customElement, property } from "lit/decorators.js";
 
 type HassEntity = {
   state: string;
@@ -25,13 +24,15 @@ declare global {
   }
 }
 
-@customElement("novastar-h-series-card")
 export class NovastarHSeriesCard extends LitElement {
-  @property({ attribute: false })
   public hass?: HomeAssistant;
 
-  @property({ attribute: false })
   private config?: NovastarCardConfig;
+
+  static properties = {
+    hass: { attribute: false },
+    config: { attribute: false }
+  };
 
   public setConfig(config: NovastarCardConfig): void {
     if (!config?.controller_entity) {
@@ -136,23 +137,24 @@ export class NovastarHSeriesCard extends LitElement {
   `;
 }
 
-@customElement("novastar-h-series-card-editor")
 class NovastarHSeriesCardEditor extends LitElement {
-  @property({ attribute: false })
   public hass?: HomeAssistant;
 
-  @property({ attribute: false })
   private config: NovastarCardConfig = {
     type: "custom:novastar-h-series-card",
     controller_entity: ""
   };
 
+  static properties = {
+    hass: { attribute: false },
+    config: { attribute: false }
+  };
+
   public setConfig(config: NovastarCardConfig): void {
-    this.config = {
-      type: "custom:novastar-h-series-card",
-      controller_entity: "",
-      ...config
-    };
+    const nextConfig: NovastarCardConfig = { ...config };
+    nextConfig.type ||= "custom:novastar-h-series-card";
+    nextConfig.controller_entity ||= "";
+    this.config = nextConfig;
   }
 
   protected render() {
@@ -256,6 +258,14 @@ class NovastarHSeriesCardEditor extends LitElement {
       padding: 12px 0;
     }
   `;
+}
+
+if (!customElements.get("novastar-h-series-card")) {
+  customElements.define("novastar-h-series-card", NovastarHSeriesCard);
+}
+
+if (!customElements.get("novastar-h-series-card-editor")) {
+  customElements.define("novastar-h-series-card-editor", NovastarHSeriesCardEditor);
 }
 
 window.customCards = window.customCards || [];
