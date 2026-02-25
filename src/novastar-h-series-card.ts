@@ -127,18 +127,37 @@ export class NovastarHSeriesCard extends LitElement {
       <ha-card>
         <div class="header-row">
           <div class="header">${this.config.title ?? "Novastar H Series"}</div>
-          ${powerEntity
-            ? html`
-                <label class="power-toggle" title="Toggle screen output">
-                  <input
-                    type="checkbox"
-                    .checked=${powerIsOn}
-                    @change=${this.handlePowerToggle}
-                  />
-                  <span class="power-slider"></span>
-                </label>
-              `
-            : nothing}
+          <div class="header-controls">
+            ${brightnessEntity && showBrightnessSlider
+              ? html`
+                  <div class="header-brightness" title="Brightness">
+                    <input
+                      class="brightness-slider header-brightness-slider"
+                      type="range"
+                      min=${brightnessMin}
+                      max=${brightnessMax}
+                      step=${brightnessStep}
+                      .value=${String(brightnessValue)}
+                      ?disabled=${powerEntity ? !powerIsOn : false}
+                      @change=${this.handleBrightnessChanged}
+                    />
+                    <span class="header-brightness-value">${Math.round(brightnessValue)}%</span>
+                  </div>
+                `
+              : nothing}
+            ${powerEntity
+              ? html`
+                  <label class="power-toggle" title="Toggle screen output">
+                    <input
+                      type="checkbox"
+                      .checked=${powerIsOn}
+                      @change=${this.handlePowerToggle}
+                    />
+                    <span class="power-slider"></span>
+                  </label>
+                `
+              : nothing}
+          </div>
         </div>
         <div class="content">
           <div class="row">
@@ -150,23 +169,7 @@ export class NovastarHSeriesCard extends LitElement {
             : nothing}
           ${brightnessEntity
             ? showBrightnessSlider
-              ? html`
-                  <div class="brightness-row">
-                    <div class="brightness-header">
-                      <span class="label">Brightness</span>
-                      <span class="value">${Math.round(brightnessValue)}%</span>
-                    </div>
-                    <input
-                      class="brightness-slider"
-                      type="range"
-                      min=${brightnessMin}
-                      max=${brightnessMax}
-                      step=${brightnessStep}
-                      .value=${String(brightnessValue)}
-                      @change=${this.handleBrightnessChanged}
-                    />
-                  </div>
-                `
+              ? nothing
               : html`<div class="row"><span class="label">Brightness</span><span class="value">${brightnessEntity.state}</span></div>`
             : nothing}
         </div>
@@ -179,6 +182,7 @@ export class NovastarHSeriesCard extends LitElement {
       align-items: center;
       display: flex;
       justify-content: space-between;
+      gap: 12px;
       padding: 16px 16px 0;
     }
 
@@ -214,6 +218,31 @@ export class NovastarHSeriesCard extends LitElement {
 
     .brightness-row {
       margin-bottom: 8px;
+    }
+
+    .header-controls {
+      align-items: center;
+      display: inline-flex;
+      gap: 10px;
+      min-height: 24px;
+    }
+
+    .header-brightness {
+      align-items: center;
+      display: inline-flex;
+      gap: 8px;
+      min-width: 170px;
+    }
+
+    .header-brightness-slider {
+      width: 120px;
+    }
+
+    .header-brightness-value {
+      color: var(--secondary-text-color);
+      font-size: 0.85rem;
+      min-width: 36px;
+      text-align: right;
     }
 
     .brightness-header {
