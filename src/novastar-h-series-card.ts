@@ -39,7 +39,7 @@ declare global {
 }
 
 export class NovastarHSeriesCard extends LitElement {
-  public hass?: HomeAssistant;
+  private _hass?: HomeAssistant;
 
   private config?: NovastarCardConfig;
   private optimisticPowerState?: "on" | "off";
@@ -48,11 +48,29 @@ export class NovastarHSeriesCard extends LitElement {
   private resolvedDeviceId?: string;
   private resolvingDeviceId?: string;
   private resolvedForHass?: HomeAssistant;
+  private lastRelevantStateSignature = "";
 
   static properties = {
-    hass: { attribute: false },
+    hass: { attribute: false, noAccessor: true },
     config: { attribute: false }
   };
+
+  public get hass(): HomeAssistant | undefined {
+    return this._hass;
+  }
+
+  public set hass(value: HomeAssistant | undefined) {
+    const oldValue = this._hass;
+    this._hass = value;
+
+    const nextSignature = this.buildRelevantStateSignature(value);
+    const hasRelevantChanges = nextSignature !== this.lastRelevantStateSignature;
+    this.lastRelevantStateSignature = nextSignature;
+
+    if (oldValue !== value || hasRelevantChanges) {
+      this.requestUpdate("hass", oldValue);
+    }
+  }
 
   public setConfig(config: NovastarCardConfig): void {
     const nextConfig: NovastarCardConfig = { ...config };
@@ -111,7 +129,7 @@ export class NovastarHSeriesCard extends LitElement {
     const powerEntity = this.hass.states[powerEntityId];
     const powerState = this.optimisticPowerState ?? powerEntity?.state;
     const powerIsOn = powerState === "on";
-    const brightnessDisabled = Boolean(powerEntity) && !powerIsOn;
+    const powerFadeToBlack = Boolean(powerEntity) && !powerIsOn;
 
     const statusEntity = statusEntityId
       ? this.hass.states[statusEntityId]
@@ -151,8 +169,8 @@ export class NovastarHSeriesCard extends LitElement {
                       max=${brightnessMax}
                       step=${brightnessStep}
                       .value=${String(brightnessValue)}
-                      .disabled=${brightnessDisabled}
-                      ?disabled=${brightnessDisabled}
+                      .disabled=${powerFadeToBlack}
+                      ?disabled=${powerFadeToBlack}
                       @change=${this.handleBrightnessChanged}
                     />
                   </div>
@@ -182,18 +200,27 @@ export class NovastarHSeriesCard extends LitElement {
             : nothing}
           ${presetEntity
             ? presetOptions.length > 0
-              ? html`
-                  <div class="row input-row">
-                    <span class="label">Preset</span>
-                    <select
-                      class="input-select"
-                      .value=${presetEntity.state}
-                      @change=${this.handlePresetSelectionChanged}
-                    >
-                      ${presetOptions.map((option) => html`<option .value=${option}>${option}</option>`) }
-                    </select>
-                  </div>
-                `
+              ? (() => {
+                  const selectedPresetOption = this.resolveSelectedOption(presetEntity, presetOptions);
+                  return html`
+                    <div class="row input-row">
+                      <span class="label">Preset</span>
+                      <select
+                        class="input-select"
+                        .disabled=${powerFadeToBlack}
+                        ?disabled=${powerFadeToBlack}
+                        @change=${this.handlePresetSelectionChanged}
+                      >
+                        ${presetOptions.map((option) => html`
+                          <option
+                            .value=${option}
+                            ?selected=${this.optionEquals(option, selectedPresetOption)}
+                          >${option}</option>
+                        `) }
+                      </select>
+                    </div>
+                  `;
+                })()
               : html`<div class="row"><span class="label">Preset</span><span class="value">${presetEntity.state}</span></div>`
             : nothing}
           ${layerSourceRows.map((row) => {
@@ -204,6 +231,8 @@ export class NovastarHSeriesCard extends LitElement {
                 <select
                   class="input-select"
                   data-entity-id=${row.entityId}
+                  .disabled=${powerFadeToBlack}
+                  ?disabled=${powerFadeToBlack}
                   @change=${this.handleLayerSourceChanged}
                 >
                   ${row.options.map((option) => html`
@@ -359,6 +388,11 @@ export class NovastarHSeriesCard extends LitElement {
       min-width: 140px;
       padding: 4px 8px;
     }
+
+    .input-select:disabled {
+      opacity: 0.45;
+      pointer-events: none;
+    }
   `;
 
   private readNumberAttribute(entity: HassEntity, key: string, fallbackValue: number): number {
@@ -434,6 +468,74 @@ export class NovastarHSeriesCard extends LitElement {
     const normalizedLeft = left.trim().toLowerCase();
     const normalizedRight = right.trim().toLowerCase();
     return normalizedLeft === normalizedRight;
+  }
+
+  private buildRelevantStateSignature(hass: HomeAssistant | undefined): string {
+    if (!hass) {
+      return "";
+    }
+
+    const ids = new Set<string>();
+    const trackedKeys: Array<keyof ResolvedEntityMap> = [
+      "power_entity",
+      "preset_entity",
+      "controller_entity",
+      "status_entity",
+      "brightness_entity",
+      "temperature_entity"
+    ];
+
+    for (const key of trackedKeys) {
+      const configuredId = this.config?.[key];
+      if (configuredId) {
+        ids.add(configuredId);
+      }
+
+      const resolvedId = this.resolvedEntities[key];
+      if (resolvedId) {
+        ids.add(resolvedId);
+      }
+    }
+
+    ids.add("switch.novastar_h2_power_screen_output");
+
+    const layerPattern = /^select\..*_layer_\d+_source$/;
+    for (const entityId of Object.keys(hass.states)) {
+      if (layerPattern.test(entityId)) {
+        ids.add(entityId);
+      }
+    }
+
+    const signatureParts = Array.from(ids)
+      .sort()
+      .map((entityId) => {
+        const entity = hass.states[entityId];
+        if (!entity) {
+          return `${entityId}:missing`;
+        }
+
+        const options = this.readStringListAttribute(entity, "options").join("|");
+        const currentOption = this.readStringAttribute(entity, "current_option") ?? "";
+        const selectedOption = this.readStringAttribute(entity, "selected_option") ?? "";
+        const source = this.readStringAttribute(entity, "source") ?? "";
+        const currentSource = this.readStringAttribute(entity, "current_source") ?? "";
+        return `${entityId}:${entity.state}:${options}:${currentOption}:${selectedOption}:${source}:${currentSource}`;
+      });
+
+    return signatureParts.join("||");
+  }
+
+  private reloadLayerSources(): void {
+    this.resolvedLayerSourceEntities = [];
+    this.resolvedDeviceId = undefined;
+    this.resolvingDeviceId = undefined;
+    this.requestUpdate();
+  }
+
+  private async waitFor(milliseconds: number): Promise<void> {
+    await new Promise<void>((resolve) => {
+      window.setTimeout(() => resolve(), milliseconds);
+    });
   }
 
   private getLayerSourceRows(): Array<{ entityId: string; entity: HassEntity; layerNumber: number; options: string[] }> {
@@ -558,6 +660,10 @@ export class NovastarHSeriesCard extends LitElement {
       entity_id: presetEntityId,
       option
     });
+
+    this.reloadLayerSources();
+    await this.waitFor(350);
+    this.reloadLayerSources();
   }
 
   private async handleLayerSourceChanged(event: Event): Promise<void> {
