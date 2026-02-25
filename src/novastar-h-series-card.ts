@@ -174,14 +174,17 @@ export class NovastarHSeriesCard extends LitElement {
         </div>
         <div class="content">
           <div class="row">
-            <span class="label">Controller</span>
+            <span class="label">Status</span>
             <span class="value">${controllerValue}</span>
           </div>
+          ${temperatureEntity
+            ? html`<div class="row"><span class="label">Temperature</span><span class="value">${temperatureEntity.state}</span></div>`
+            : nothing}
           ${inputEntity
             ? inputOptions.length > 0
               ? html`
                   <div class="row input-row">
-                    <span class="label">Input</span>
+                    <span class="label">Preset</span>
                     <select
                       class="input-select"
                       .value=${inputEntity.state}
@@ -191,7 +194,7 @@ export class NovastarHSeriesCard extends LitElement {
                     </select>
                   </div>
                 `
-              : html`<div class="row"><span class="label">Input</span><span class="value">${inputEntity.state}</span></div>`
+              : html`<div class="row"><span class="label">Preset</span><span class="value">${inputEntity.state}</span></div>`
             : nothing}
           ${layerSourceRows.map((row) => html`
             <div class="row input-row">
@@ -206,9 +209,6 @@ export class NovastarHSeriesCard extends LitElement {
               </select>
             </div>
           `)}
-          ${temperatureEntity
-            ? html`<div class="row"><span class="label">Temperature</span><span class="value">${temperatureEntity.state}</span></div>`
-            : nothing}
           ${brightnessEntity
             ? showBrightnessSlider
               ? nothing
@@ -750,7 +750,7 @@ class NovastarHSeriesCardEditor extends LitElement {
             ></ha-entity-picker>
             <ha-entity-picker
               .hass=${this.hass}
-              label="Input selection entity (optional override)"
+              label="Preset selection entity (optional override)"
               .value=${this.config.input_entity ?? ""}
               .configValue=${"input_entity"}
               @value-changed=${this.handleEntityChanged}
