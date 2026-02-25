@@ -202,7 +202,7 @@ export class NovastarHSeriesCard extends LitElement {
               <select
                 class="input-select"
                 data-entity-id=${row.entityId}
-                .value=${row.entity.state}
+                .value=${this.resolveSelectedOption(row.entity, row.options)}
                 @change=${this.handleLayerSourceChanged}
               >
                 ${row.options.map((option) => html`<option .value=${option}>${option}</option>`)}
@@ -383,6 +383,42 @@ export class NovastarHSeriesCard extends LitElement {
     return value.filter((item): item is string => typeof item === "string");
   }
 
+  private resolveSelectedOption(entity: HassEntity, options: string[]): string {
+    const stateValue = entity.state?.trim();
+    const candidates = [
+      stateValue,
+      this.readStringAttribute(entity, "current_option"),
+      this.readStringAttribute(entity, "selected_option"),
+      this.readStringAttribute(entity, "source"),
+      this.readStringAttribute(entity, "current_source")
+    ].filter((candidate): candidate is string => Boolean(candidate));
+
+    for (const candidate of candidates) {
+      const exactMatch = options.find((option) => option === candidate);
+      if (exactMatch) {
+        return exactMatch;
+      }
+
+      const normalizedCandidate = candidate.toLowerCase();
+      const caseInsensitiveMatch = options.find((option) => option.toLowerCase() === normalizedCandidate);
+      if (caseInsensitiveMatch) {
+        return caseInsensitiveMatch;
+      }
+    }
+
+    return stateValue ?? "";
+  }
+
+  private readStringAttribute(entity: HassEntity, key: string): string | undefined {
+    const value = entity.attributes[key];
+    if (typeof value !== "string") {
+      return undefined;
+    }
+
+    const trimmed = value.trim();
+    return trimmed || undefined;
+  }
+
   private getLayerSourceRows(): Array<{ entityId: string; entity: HassEntity; layerNumber: number; options: string[] }> {
     if (!this.hass) {
       return [];
@@ -405,16 +441,20 @@ export class NovastarHSeriesCard extends LitElement {
 
   private getLayerSourceEntityIds(): string[] {
     const pattern = /^select\..*_layer_\d+_source$/;
+    const resolvedIds = this.resolvedLayerSourceEntities;
+    const liveIds = this.hass
+      ? Object.keys(this.hass.states).filter((entityId) => pattern.test(entityId))
+      : [];
 
-    if (this.resolvedLayerSourceEntities.length > 0) {
-      return this.resolvedLayerSourceEntities;
+    if (resolvedIds.length === 0) {
+      return liveIds;
     }
 
-    if (!this.hass) {
-      return [];
+    if (liveIds.length === 0) {
+      return resolvedIds;
     }
 
-    return Object.keys(this.hass.states).filter((entityId) => pattern.test(entityId));
+    return Array.from(new Set([...resolvedIds, ...liveIds]));
   }
 
   private getLayerNumber(entityId: string): number {
