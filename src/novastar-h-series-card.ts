@@ -352,6 +352,7 @@ class NovastarHSeriesCardEditor extends LitElement {
   private config: NovastarCardConfig = {
     type: "custom:novastar-h-series-card"
   };
+  private attemptedAutoDeviceDefault = false;
 
   static properties = {
     hass: { attribute: false },
@@ -362,12 +363,19 @@ class NovastarHSeriesCardEditor extends LitElement {
     const nextConfig: NovastarCardConfig = { ...config };
     nextConfig.type ||= "custom:novastar-h-series-card";
     this.config = nextConfig;
+    this.attemptedAutoDeviceDefault = false;
+  }
+
+  protected updated(): void {
+    void this.ensureDefaultDeviceId();
   }
 
   protected render() {
     if (!this.hass) {
       return nothing;
     }
+
+    const hasDevicePicker = Boolean(customElements.get("ha-device-picker"));
 
     return html`
       <div class="editor">
@@ -377,19 +385,25 @@ class NovastarHSeriesCardEditor extends LitElement {
           .configValue=${"title"}
           @input=${this.handleInputChanged}
         ></ha-textfield>
-        <ha-textfield
-          label="Device ID"
-          .value=${this.config.device_id ?? ""}
-          .configValue=${"device_id"}
-          @input=${this.handleInputChanged}
-        ></ha-textfield>
-        <ha-device-picker
-          .hass=${this.hass}
-          label="Device picker (optional)"
-          .value=${this.config.device_id ?? ""}
-          .configValue=${"device_id"}
-          @value-changed=${this.handleEntityChanged}
-        ></ha-device-picker>
+        ${hasDevicePicker
+          ? html`
+              <ha-device-picker
+                .hass=${this.hass}
+                label="Device picker (optional)"
+                .value=${this.config.device_id ?? ""}
+                .configValue=${"device_id"}
+                @value-changed=${this.handleEntityChanged}
+              ></ha-device-picker>
+            `
+          : html`
+              <ha-textfield
+                label="Device ID"
+                .value=${this.config.device_id ?? ""}
+                .configValue=${"device_id"}
+                @input=${this.handleInputChanged}
+              ></ha-textfield>
+              <div class="helper">Device picker is unavailable in this Home Assistant frontend. Use Device ID above.</div>
+            `}
         <ha-entity-picker
           .hass=${this.hass}
           label="Controller entity (optional override)"
@@ -480,11 +494,57 @@ class NovastarHSeriesCardEditor extends LitElement {
     );
   }
 
+  private async ensureDefaultDeviceId(): Promise<void> {
+    if (this.attemptedAutoDeviceDefault || !this.hass?.callWS) {
+      return;
+    }
+
+    if (this.config.device_id?.trim()) {
+      this.attemptedAutoDeviceDefault = true;
+      return;
+    }
+
+    this.attemptedAutoDeviceDefault = true;
+
+    try {
+      const registry = await this.hass.callWS({ type: "config/entity_registry/list" });
+      if (!Array.isArray(registry)) {
+        return;
+      }
+
+      const firstNovastarDeviceId = registry
+        .filter((entry) => {
+          if (!entry || typeof entry !== "object") {
+            return false;
+          }
+
+          const item = entry as Record<string, unknown>;
+          return item.platform === "novastar_h"
+            && typeof item.device_id === "string"
+            && !item.disabled_by
+            && !item.hidden_by;
+        })
+        .map((entry) => (entry as Record<string, unknown>).device_id as string)[0];
+
+      if (!firstNovastarDeviceId) {
+        return;
+      }
+
+      this.updateConfigValue("device_id", firstNovastarDeviceId);
+    } catch {
+    }
+  }
+
   static styles = css`
     .editor {
       display: grid;
       gap: 12px;
       padding: 12px 0;
+    }
+
+    .helper {
+      color: var(--secondary-text-color);
+      font-size: 0.9rem;
     }
   `;
 }
