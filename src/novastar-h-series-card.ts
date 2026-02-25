@@ -260,12 +260,14 @@ class NovastarHSeriesCardEditor extends LitElement {
   `;
 }
 
-if (!customElements.get("novastar-h-series-card")) {
+try {
   customElements.define("novastar-h-series-card", NovastarHSeriesCard);
+} catch {
 }
 
-if (!customElements.get("novastar-h-series-card-editor")) {
+try {
   customElements.define("novastar-h-series-card-editor", NovastarHSeriesCardEditor);
+} catch {
 }
 
 window.customCards = window.customCards || [];
