@@ -354,6 +354,7 @@ class NovastarHSeriesCardEditor extends LitElement {
   };
   private showOverrides = false;
   private localDeviceId?: string;
+  private autoDetectedDeviceId?: string;
   private deviceNameById: Record<string, string> = {};
   private loadingDeviceNames = false;
   private attemptedAutoDeviceDefault = false;
@@ -368,7 +369,11 @@ class NovastarHSeriesCardEditor extends LitElement {
     const nextConfig: NovastarCardConfig = { ...config };
     nextConfig.type ||= "custom:novastar-h-series-card";
     this.config = nextConfig;
-    this.localDeviceId = nextConfig.device_id?.trim() || this.localDeviceId;
+    const configuredDeviceId = nextConfig.device_id?.trim();
+    if (configuredDeviceId) {
+      this.localDeviceId = configuredDeviceId;
+      this.autoDetectedDeviceId = configuredDeviceId;
+    }
     this.showOverrides = Boolean(
       nextConfig.controller_entity
       || nextConfig.status_entity
@@ -389,7 +394,7 @@ class NovastarHSeriesCardEditor extends LitElement {
     }
 
     const hasDevicePicker = Boolean(customElements.get("ha-device-picker"));
-    const effectiveDeviceId = this.config.device_id?.trim() || this.localDeviceId || "";
+    const effectiveDeviceId = this.config.device_id?.trim() || this.localDeviceId || this.autoDetectedDeviceId || "";
     const selectedDeviceLabel = this.getSelectedDeviceLabel(effectiveDeviceId);
 
     return html`
@@ -496,6 +501,7 @@ class NovastarHSeriesCardEditor extends LitElement {
   private updateConfigValue(configValue: keyof NovastarCardConfig, nextValue: string): void {
     if (configValue === "device_id") {
       this.localDeviceId = nextValue || undefined;
+      this.autoDetectedDeviceId = nextValue || this.autoDetectedDeviceId;
     }
 
     const currentValue = (this.config[configValue] as string | undefined) ?? "";
@@ -565,7 +571,9 @@ class NovastarHSeriesCardEditor extends LitElement {
         return;
       }
 
+      this.autoDetectedDeviceId = firstNovastarDeviceId;
       this.localDeviceId = firstNovastarDeviceId;
+      this.requestUpdate();
       this.updateConfigValue("device_id", firstNovastarDeviceId);
     } catch {
     }
@@ -616,7 +624,7 @@ class NovastarHSeriesCardEditor extends LitElement {
 
   private getSelectedDeviceLabel(effectiveDeviceId: string): string {
     if (!effectiveDeviceId) {
-      return "";
+      return "Auto-detecting...";
     }
 
     const deviceName = this.deviceNameById[effectiveDeviceId];
