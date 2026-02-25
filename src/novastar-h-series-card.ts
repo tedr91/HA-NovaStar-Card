@@ -15,6 +15,7 @@ type NovastarCardConfig = {
   type: string;
   title?: string;
   device_id?: string;
+  power_entity?: string;
   controller_entity?: string;
   status_entity?: string;
   brightness_entity?: string;
@@ -22,6 +23,7 @@ type NovastarCardConfig = {
 };
 
 type ResolvedEntityMap = {
+  power_entity?: string;
   controller_entity?: string;
   status_entity?: string;
   brightness_entity?: string;
@@ -95,9 +97,13 @@ export class NovastarHSeriesCard extends LitElement {
       return html`<ha-card><div class="content">Entity not found: ${controllerEntityId}</div></ha-card>`;
     }
 
+    const powerEntityId = this.getEntityId("power_entity") ?? "switch.novastar_h2_power_screen_output";
     const statusEntityId = this.getEntityId("status_entity");
     const brightnessEntityId = this.getEntityId("brightness_entity");
     const temperatureEntityId = this.getEntityId("temperature_entity");
+
+    const powerEntity = this.hass.states[powerEntityId];
+    const powerIsOn = powerEntity?.state === "on";
 
     const statusEntity = statusEntityId
       ? this.hass.states[statusEntityId]
@@ -125,6 +131,22 @@ export class NovastarHSeriesCard extends LitElement {
             <span class="label">Controller</span>
             <span class="value">${controllerValue}</span>
           </div>
+          ${powerEntity
+            ? html`
+                <div class="row">
+                  <span class="label">Power</span>
+                  <button
+                    class="power-button ${powerIsOn ? "on" : "off"}"
+                    @click=${this.handlePowerToggle}
+                  >
+                    ${powerIsOn ? "On" : "Off"}
+                  </button>
+                </div>
+              `
+            : nothing}
+          ${temperatureEntity
+            ? html`<div class="row"><span class="label">Temperature</span><span class="value">${temperatureEntity.state}</span></div>`
+            : nothing}
           ${brightnessEntity
             ? showBrightnessSlider
               ? html`
@@ -145,9 +167,6 @@ export class NovastarHSeriesCard extends LitElement {
                   </div>
                 `
               : html`<div class="row"><span class="label">Brightness</span><span class="value">${brightnessEntity.state}</span></div>`
-            : nothing}
-          ${temperatureEntity
-            ? html`<div class="row"><span class="label">Temperature</span><span class="value">${temperatureEntity.state}</span></div>`
             : nothing}
         </div>
       </ha-card>
@@ -201,6 +220,26 @@ export class NovastarHSeriesCard extends LitElement {
       box-sizing: border-box;
       width: 100%;
     }
+
+    .power-button {
+      border: 1px solid var(--divider-color);
+      border-radius: 16px;
+      color: var(--primary-text-color);
+      cursor: pointer;
+      font: inherit;
+      min-width: 64px;
+      padding: 4px 12px;
+    }
+
+    .power-button.on {
+      background: var(--success-color, var(--primary-color));
+      border-color: var(--success-color, var(--primary-color));
+      color: var(--text-primary-color, #fff);
+    }
+
+    .power-button.off {
+      background: var(--card-background-color);
+    }
   `;
 
   private readNumberAttribute(entity: HassEntity, key: string, fallbackValue: number): number {
@@ -238,6 +277,23 @@ export class NovastarHSeriesCard extends LitElement {
     await this.hass.callService?.("number", "set_value", {
       entity_id: brightnessEntityId,
       value: nextValue
+    });
+  }
+
+  private async handlePowerToggle(): Promise<void> {
+    if (!this.hass) {
+      return;
+    }
+
+    const powerEntityId = this.getEntityId("power_entity") ?? "switch.novastar_h2_power_screen_output";
+    const powerEntity = this.hass.states[powerEntityId];
+    if (!powerEntity) {
+      return;
+    }
+
+    const service = powerEntity.state === "on" ? "turn_off" : "turn_on";
+    await this.hass.callService?.("switch", service, {
+      entity_id: powerEntityId
     });
   }
 
@@ -305,6 +361,7 @@ export class NovastarHSeriesCard extends LitElement {
         .map((entry) => (entry as Record<string, unknown>).entity_id as string);
 
       const nextResolved: ResolvedEntityMap = {
+        power_entity: this.pickEntity(entityIds, [/_power_screen_output$/, /_screen_output$/], ["switch"]),
         controller_entity: this.pickEntity(entityIds, [/_device_status$/], ["sensor"]),
         status_entity: this.pickEntity(entityIds, [/_signal_status$/], ["sensor"]),
         brightness_entity: this.pickEntity(entityIds, [/_brightness$/], ["number", "sensor"]),
@@ -375,7 +432,8 @@ class NovastarHSeriesCardEditor extends LitElement {
       this.autoDetectedDeviceId = configuredDeviceId;
     }
     this.showOverrides = Boolean(
-      nextConfig.controller_entity
+      nextConfig.power_entity
+      || nextConfig.controller_entity
       || nextConfig.status_entity
       || nextConfig.brightness_entity
       || nextConfig.temperature_entity
@@ -433,6 +491,13 @@ class NovastarHSeriesCardEditor extends LitElement {
         <details class="overrides" .open=${this.showOverrides} @toggle=${this.handleOverridesToggle}>
           <summary>Override Entities</summary>
           <div class="overrides-content">
+            <ha-entity-picker
+              .hass=${this.hass}
+              label="Power entity (optional override)"
+              .value=${this.config.power_entity ?? ""}
+              .configValue=${"power_entity"}
+              @value-changed=${this.handleEntityChanged}
+            ></ha-entity-picker>
             <ha-entity-picker
               .hass=${this.hass}
               label="Controller entity (optional override)"
