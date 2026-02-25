@@ -113,6 +113,9 @@ export class NovastarHSeriesCard extends LitElement {
     const brightnessMax = brightnessEntity ? this.readNumberAttribute(brightnessEntity, "max", 100) : 100;
     const brightnessStep = brightnessEntity ? this.readNumberAttribute(brightnessEntity, "step", 1) : 1;
     const showBrightnessSlider = brightnessEntity && Number.isFinite(brightnessValue);
+    const controllerValue = statusEntity
+      ? `${controller.state} (${statusEntity.state})`
+      : controller.state;
 
     return html`
       <ha-card>
@@ -120,11 +123,8 @@ export class NovastarHSeriesCard extends LitElement {
         <div class="content">
           <div class="row">
             <span class="label">Controller</span>
-            <span class="value">${controller.state}</span>
+            <span class="value">${controllerValue}</span>
           </div>
-          ${statusEntity
-            ? html`<div class="row"><span class="label">Status</span><span class="value">${statusEntity.state}</span></div>`
-            : nothing}
           ${brightnessEntity
             ? showBrightnessSlider
               ? html`
@@ -352,6 +352,7 @@ class NovastarHSeriesCardEditor extends LitElement {
   private config: NovastarCardConfig = {
     type: "custom:novastar-h-series-card"
   };
+  private showOverrides = false;
   private localDeviceId?: string;
   private deviceNameById: Record<string, string> = {};
   private loadingDeviceNames = false;
@@ -359,7 +360,8 @@ class NovastarHSeriesCardEditor extends LitElement {
 
   static properties = {
     hass: { attribute: false },
-    config: { attribute: false }
+    config: { attribute: false },
+    showOverrides: { attribute: false }
   };
 
   public setConfig(config: NovastarCardConfig): void {
@@ -367,6 +369,12 @@ class NovastarHSeriesCardEditor extends LitElement {
     nextConfig.type ||= "custom:novastar-h-series-card";
     this.config = nextConfig;
     this.localDeviceId = nextConfig.device_id?.trim() || this.localDeviceId;
+    this.showOverrides = Boolean(
+      nextConfig.controller_entity
+      || nextConfig.status_entity
+      || nextConfig.brightness_entity
+      || nextConfig.temperature_entity
+    );
     this.attemptedAutoDeviceDefault = false;
   }
 
@@ -381,7 +389,7 @@ class NovastarHSeriesCardEditor extends LitElement {
     }
 
     const hasDevicePicker = Boolean(customElements.get("ha-device-picker"));
-    const effectiveDeviceId = this.config.device_id ?? this.localDeviceId ?? "";
+    const effectiveDeviceId = this.config.device_id?.trim() || this.localDeviceId || "";
     const selectedDeviceLabel = this.getSelectedDeviceLabel(effectiveDeviceId);
 
     return html`
@@ -417,36 +425,46 @@ class NovastarHSeriesCardEditor extends LitElement {
           .value=${selectedDeviceLabel}
           readonly
         ></ha-textfield>
-        <ha-entity-picker
-          .hass=${this.hass}
-          label="Controller entity (optional override)"
-          .value=${this.config.controller_entity ?? ""}
-          .configValue=${"controller_entity"}
-          @value-changed=${this.handleEntityChanged}
-        ></ha-entity-picker>
-        <ha-entity-picker
-          .hass=${this.hass}
-          label="Status entity (optional)"
-          .value=${this.config.status_entity ?? ""}
-          .configValue=${"status_entity"}
-          @value-changed=${this.handleEntityChanged}
-        ></ha-entity-picker>
-        <ha-entity-picker
-          .hass=${this.hass}
-          label="Brightness entity (optional)"
-          .value=${this.config.brightness_entity ?? ""}
-          .configValue=${"brightness_entity"}
-          @value-changed=${this.handleEntityChanged}
-        ></ha-entity-picker>
-        <ha-entity-picker
-          .hass=${this.hass}
-          label="Temperature entity (optional)"
-          .value=${this.config.temperature_entity ?? ""}
-          .configValue=${"temperature_entity"}
-          @value-changed=${this.handleEntityChanged}
-        ></ha-entity-picker>
+        <details class="overrides" .open=${this.showOverrides} @toggle=${this.handleOverridesToggle}>
+          <summary>Override Entities</summary>
+          <div class="overrides-content">
+            <ha-entity-picker
+              .hass=${this.hass}
+              label="Controller entity (optional override)"
+              .value=${this.config.controller_entity ?? ""}
+              .configValue=${"controller_entity"}
+              @value-changed=${this.handleEntityChanged}
+            ></ha-entity-picker>
+            <ha-entity-picker
+              .hass=${this.hass}
+              label="Status entity (optional)"
+              .value=${this.config.status_entity ?? ""}
+              .configValue=${"status_entity"}
+              @value-changed=${this.handleEntityChanged}
+            ></ha-entity-picker>
+            <ha-entity-picker
+              .hass=${this.hass}
+              label="Brightness entity (optional)"
+              .value=${this.config.brightness_entity ?? ""}
+              .configValue=${"brightness_entity"}
+              @value-changed=${this.handleEntityChanged}
+            ></ha-entity-picker>
+            <ha-entity-picker
+              .hass=${this.hass}
+              label="Temperature entity (optional)"
+              .value=${this.config.temperature_entity ?? ""}
+              .configValue=${"temperature_entity"}
+              @value-changed=${this.handleEntityChanged}
+            ></ha-entity-picker>
+          </div>
+        </details>
       </div>
     `;
+  }
+
+  private handleOverridesToggle(event: Event): void {
+    const target = event.target as HTMLDetailsElement;
+    this.showOverrides = target.open;
   }
 
   private handleInputChanged(event: Event): void {
@@ -623,6 +641,24 @@ class NovastarHSeriesCardEditor extends LitElement {
 
     .readonly {
       opacity: 0.9;
+    }
+
+    .overrides {
+      border: 1px solid var(--divider-color);
+      border-radius: 6px;
+      padding: 8px 12px;
+    }
+
+    .overrides summary {
+      cursor: pointer;
+      font-weight: 500;
+      user-select: none;
+    }
+
+    .overrides-content {
+      display: grid;
+      gap: 12px;
+      margin-top: 12px;
     }
   `;
 }
