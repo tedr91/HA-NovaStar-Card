@@ -35,10 +35,9 @@ export class NovastarHSeriesCard extends LitElement {
   };
 
   public setConfig(config: NovastarCardConfig): void {
-    if (!config?.controller_entity) {
-      throw new Error("A controller_entity is required for novastar-h-series-card.");
-    }
-    this.config = config;
+    const nextConfig: NovastarCardConfig = { ...config };
+    nextConfig.type ||= "custom:novastar-h-series-card";
+    this.config = nextConfig;
   }
 
   public getCardSize(): number {
