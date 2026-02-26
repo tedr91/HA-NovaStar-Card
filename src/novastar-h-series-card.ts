@@ -61,6 +61,8 @@ declare global {
 }
 
 export class NovastarHSeriesCard extends LitElement {
+  private static readonly LAYOUT_BUILD_MARKER = "wm-2026-02-25-1";
+
   private _hass?: HomeAssistant;
 
   private config?: NovastarCardConfig;
@@ -432,6 +434,7 @@ export class NovastarHSeriesCard extends LitElement {
       margin-top: 12px;
       border-top: 1px solid var(--divider-color);
       padding-top: 12px;
+      position: relative;
     }
 
     .layout-title {
@@ -459,6 +462,14 @@ export class NovastarHSeriesCard extends LitElement {
       fill-opacity: 1;
       stroke: #808080;
       stroke-width: 1;
+    }
+
+    .layout-version {
+      bottom: 14px;
+      color: #9e9e9e;
+      font-size: 10px;
+      position: absolute;
+      right: 10px;
     }
 
     .layout-label {
@@ -515,6 +526,7 @@ export class NovastarHSeriesCard extends LitElement {
             `;
           })}
         </svg>
+        <div class="layout-version">${NovastarHSeriesCard.LAYOUT_BUILD_MARKER}</div>
       </div>
     `;
   }
