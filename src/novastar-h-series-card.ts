@@ -17,7 +17,8 @@ type NovastarCardConfig = {
   device_id?: string;
   power_entity?: string;
   preset_entity?: string;
-  layout_entity?: string;
+  screens_entity?: string;
+  layers_entity?: string;
   controller_entity?: string;
   status_entity?: string;
   brightness_entity?: string;
@@ -27,7 +28,8 @@ type NovastarCardConfig = {
 type ResolvedEntityMap = {
   power_entity?: string;
   preset_entity?: string;
-  layout_entity?: string;
+  screens_entity?: string;
+  layers_entity?: string;
   controller_entity?: string;
   status_entity?: string;
   brightness_entity?: string;
@@ -141,7 +143,8 @@ export class NovastarHSeriesCard extends LitElement {
 
     const powerEntityId = this.getEntityId("power_entity") ?? "switch.novastar_h2_power_screen_output";
     const presetEntityId = this.getEntityId("preset_entity");
-    const layoutEntityId = this.getEntityId("layout_entity");
+    const screensEntityId = this.getEntityId("screens_entity");
+    const layersEntityId = this.getEntityId("layers_entity");
     const statusEntityId = this.getEntityId("status_entity");
     const brightnessEntityId = this.getEntityId("brightness_entity");
     const temperatureEntityId = this.getEntityId("temperature_entity");
@@ -157,8 +160,11 @@ export class NovastarHSeriesCard extends LitElement {
     const presetEntity = presetEntityId
       ? this.hass.states[presetEntityId]
       : undefined;
-    const layoutEntity = layoutEntityId
-      ? this.hass.states[layoutEntityId]
+    const screensEntity = screensEntityId
+      ? this.hass.states[screensEntityId]
+      : undefined;
+    const layersEntity = layersEntityId
+      ? this.hass.states[layersEntityId]
       : undefined;
     const brightnessEntity = brightnessEntityId
       ? this.hass.states[brightnessEntityId]
@@ -173,7 +179,7 @@ export class NovastarHSeriesCard extends LitElement {
     const showBrightnessSlider = brightnessEntity && Number.isFinite(brightnessValue);
     const presetOptions = this.readStringListAttribute(presetEntity, "options");
     const layerSourceRows = this.getLayerSourceRows();
-    const layoutPayload = this.readLayoutPayload(layoutEntity);
+    const layoutPayload = this.readLayoutPayload(screensEntity, layersEntity);
     const controllerValue = statusEntity
       ? `${controller.state} (${statusEntity.state})`
       : controller.state;
@@ -576,39 +582,26 @@ export class NovastarHSeriesCard extends LitElement {
     return normalizedLeft === normalizedRight;
   }
 
-  private readLayoutPayload(entity: HassEntity | undefined): LayoutPayload | undefined {
-    if (!entity) {
+  private readLayoutPayload(
+    screensEntity: HassEntity | undefined,
+    layersEntity: HassEntity | undefined
+  ): LayoutPayload | undefined {
+    if (!screensEntity || !layersEntity) {
       return undefined;
     }
 
-    const rawPayload = entity.attributes.layout_json
-      ?? entity.attributes.layout
-      ?? entity.attributes.screen_layout;
-
-    const parsedPayload = this.parseLayoutPayload(rawPayload);
-    if (!parsedPayload) {
+    const firstScreen = this.readFirstScreen(screensEntity);
+    if (!firstScreen) {
       return undefined;
     }
 
-    const rawScreen = this.asRecord(parsedPayload.screen) ?? this.asRecord(parsedPayload.canvas);
-    const screenWidth = this.readFiniteNumber(
-      parsedPayload.screenWidth
-      ?? parsedPayload.width
-      ?? rawScreen?.width
-      ?? rawScreen?.w
-    );
-    const screenHeight = this.readFiniteNumber(
-      parsedPayload.screenHeight
-      ?? parsedPayload.height
-      ?? rawScreen?.height
-      ?? rawScreen?.h
-    );
-
+    const screenWidth = this.readFiniteNumber(firstScreen.width ?? firstScreen.w);
+    const screenHeight = this.readFiniteNumber(firstScreen.height ?? firstScreen.h);
     if (!screenWidth || !screenHeight || screenWidth <= 0 || screenHeight <= 0) {
       return undefined;
     }
 
-    const rawLayers = Array.isArray(parsedPayload.layers) ? parsedPayload.layers : [];
+    const rawLayers = this.readLayersCollection(layersEntity);
     const layers: LayoutLayer[] = rawLayers
       .map((item, index) => this.normalizeLayoutLayer(item, index))
       .filter((item): item is LayoutLayer => Boolean(item));
@@ -620,21 +613,95 @@ export class NovastarHSeriesCard extends LitElement {
     };
   }
 
-  private parseLayoutPayload(value: unknown): Record<string, unknown> | undefined {
-    if (!value) {
-      return undefined;
-    }
+  private readFirstScreen(entity: HassEntity): Record<string, unknown> | undefined {
+    const candidates: unknown[] = [
+      entity.attributes.screens,
+      entity.attributes.screen_list,
+      entity.attributes.screen,
+      entity.attributes.data,
+      entity.attributes.layout_json,
+      entity.attributes.layout,
+      entity.attributes.screen_layout
+    ];
 
-    if (typeof value === "string") {
-      try {
-        const parsed = JSON.parse(value);
-        return this.asRecord(parsed);
-      } catch {
-        return undefined;
+    for (const candidate of candidates) {
+      const parsed = this.parseStructuredValue(candidate);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        const firstEntry = this.asRecord(parsed[0]);
+        if (firstEntry) {
+          return firstEntry;
+        }
+      }
+
+      const record = this.asRecord(parsed);
+      if (!record) {
+        continue;
+      }
+
+      const nestedScreens = record.screens;
+      if (Array.isArray(nestedScreens) && nestedScreens.length > 0) {
+        const firstNested = this.asRecord(nestedScreens[0]);
+        if (firstNested) {
+          return firstNested;
+        }
+      }
+
+      if (this.readFiniteNumber(record.width ?? record.w) && this.readFiniteNumber(record.height ?? record.h)) {
+        return record;
       }
     }
 
-    return this.asRecord(value);
+    if (this.readFiniteNumber(entity.attributes.width ?? entity.attributes.w)
+      && this.readFiniteNumber(entity.attributes.height ?? entity.attributes.h)) {
+      return entity.attributes;
+    }
+
+    return undefined;
+  }
+
+  private readLayersCollection(entity: HassEntity): unknown[] {
+    const candidates: unknown[] = [
+      entity.attributes.layers,
+      entity.attributes.layer_list,
+      entity.attributes.data,
+      entity.attributes.layout_json,
+      entity.attributes.layout,
+      entity.attributes.screen_layout
+    ];
+
+    for (const candidate of candidates) {
+      const parsed = this.parseStructuredValue(candidate);
+      if (Array.isArray(parsed)) {
+        return parsed;
+      }
+
+      const record = this.asRecord(parsed);
+      if (!record) {
+        continue;
+      }
+
+      if (Array.isArray(record.layers)) {
+        return record.layers;
+      }
+
+      if (Array.isArray(record.layer_list)) {
+        return record.layer_list;
+      }
+    }
+
+    return [];
+  }
+
+  private parseStructuredValue(value: unknown): unknown {
+    if (typeof value !== "string") {
+      return value;
+    }
+
+    try {
+      return JSON.parse(value);
+    } catch {
+      return value;
+    }
   }
 
   private asRecord(value: unknown): Record<string, unknown> | undefined {
@@ -677,6 +744,8 @@ export class NovastarHSeriesCard extends LitElement {
 
     const source = typeof layer.source === "string"
       ? layer.source
+      : typeof layer.input === "string"
+        ? layer.input
       : typeof layer.name === "string"
         ? layer.name
         : undefined;
@@ -709,7 +778,8 @@ export class NovastarHSeriesCard extends LitElement {
     const trackedKeys: Array<keyof ResolvedEntityMap> = [
       "power_entity",
       "preset_entity",
-      "layout_entity",
+      "screens_entity",
+      "layers_entity",
       "controller_entity",
       "status_entity",
       "brightness_entity",
@@ -1004,6 +1074,8 @@ export class NovastarHSeriesCard extends LitElement {
       const nextResolved: ResolvedEntityMap = {
         power_entity: this.pickEntity(entityIds, [/_power_screen_output$/, /_screen_output$/], ["switch"]),
         preset_entity: this.pickEntity(entityIds, [/_preset$/, /_layer_\d+_source$/], ["select"]),
+        screens_entity: this.pickEntity(entityIds, [/_screens$/], ["sensor"]),
+        layers_entity: this.pickEntity(entityIds, [/_layers$/], ["sensor"]),
         controller_entity: this.pickEntity(entityIds, [/_device_status$/], ["sensor"]),
         status_entity: this.pickEntity(entityIds, [/_signal_status$/], ["sensor"]),
         brightness_entity: this.pickEntity(entityIds, [/_brightness$/], ["number", "sensor"]),
@@ -1077,7 +1149,8 @@ class NovastarHSeriesCardEditor extends LitElement {
     this.showOverrides = Boolean(
       nextConfig.power_entity
       || nextConfig.preset_entity
-      || nextConfig.layout_entity
+      || nextConfig.screens_entity
+      || nextConfig.layers_entity
       || nextConfig.controller_entity
       || nextConfig.status_entity
       || nextConfig.brightness_entity
@@ -1152,9 +1225,16 @@ class NovastarHSeriesCardEditor extends LitElement {
             ></ha-entity-picker>
             <ha-entity-picker
               .hass=${this.hass}
-              label="Layout entity (optional)"
-              .value=${this.config.layout_entity ?? ""}
-              .configValue=${"layout_entity"}
+              label="Screens entity (optional override)"
+              .value=${this.config.screens_entity ?? ""}
+              .configValue=${"screens_entity"}
+              @value-changed=${this.handleEntityChanged}
+            ></ha-entity-picker>
+            <ha-entity-picker
+              .hass=${this.hass}
+              label="Layers entity (optional override)"
+              .value=${this.config.layers_entity ?? ""}
+              .configValue=${"layers_entity"}
               @value-changed=${this.handleEntityChanged}
             ></ha-entity-picker>
             <ha-entity-picker
