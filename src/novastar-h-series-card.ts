@@ -44,6 +44,7 @@ type LayoutLayer = {
   height: number;
   z: number;
   source?: string;
+  audioOpen?: boolean;
   visible: boolean;
 };
 
@@ -661,8 +662,10 @@ export class NovastarHSeriesCard extends LitElement {
 
   private readLayersCollection(entity: HassEntity): unknown[] {
     const candidates: unknown[] = [
+      entity.state,
       entity.attributes.layers,
       entity.attributes.layer_list,
+      entity.attributes.value,
       entity.attributes.data,
       entity.attributes.layout_json,
       entity.attributes.layout,
@@ -733,22 +736,39 @@ export class NovastarHSeriesCard extends LitElement {
       return undefined;
     }
 
-    const width = this.readFiniteNumber(layer.width ?? layer.w);
-    const height = this.readFiniteNumber(layer.height ?? layer.h);
-    const x = this.readFiniteNumber(layer.x) ?? 0;
-    const y = this.readFiniteNumber(layer.y) ?? 0;
+    const general = this.asRecord(layer.general);
+    const windowData = this.asRecord(layer.window);
+    const audioStatus = this.asRecord(layer.audioStatus);
+
+    if (!general || !windowData) {
+      return undefined;
+    }
+
+    const width = this.readFiniteNumber(windowData.width);
+    const height = this.readFiniteNumber(windowData.height);
+    const x = this.readFiniteNumber(windowData.x) ?? 0;
+    const y = this.readFiniteNumber(windowData.y) ?? 0;
 
     if (!width || !height || width <= 0 || height <= 0) {
       return undefined;
     }
 
-    const source = typeof layer.source === "string"
-      ? layer.source
-      : typeof layer.input === "string"
-        ? layer.input
-      : typeof layer.name === "string"
-        ? layer.name
-        : undefined;
+    const layerId = general.layerId;
+    if (typeof layerId !== "string" && typeof layerId !== "number") {
+      return undefined;
+    }
+
+    const zValue = this.readFiniteNumber(general.zorder);
+    if (zValue === undefined) {
+      return undefined;
+    }
+
+    const source = typeof general.name === "string"
+      ? general.name
+      : undefined;
+    const audioOpen = audioStatus?.isOpen === undefined
+      ? undefined
+      : Boolean(audioStatus.isOpen);
     const visible = layer.visible === undefined
       ? true
       : Boolean(layer.visible);
@@ -758,13 +778,14 @@ export class NovastarHSeriesCard extends LitElement {
     }
 
     return {
-      id: typeof layer.id === "string" ? layer.id : `Layer ${index + 1}`,
+      id: String(layerId),
       x,
       y,
       width,
       height,
-      z: this.readFiniteNumber(layer.z) ?? index,
+      z: zValue,
       source,
+      audioOpen,
       visible
     };
   }
