@@ -67,6 +67,20 @@ type ViewLayer = {
   audioOpen?: boolean;
 };
 
+type LayerSourceRow = {
+  entityId: string;
+  entity: HassEntity;
+  layerNumber: number;
+  options: string[];
+};
+
+type LayerSourceChooser = {
+  entityId: string;
+  layerNumber: number;
+  options: string[];
+  selectedOption: string;
+};
+
 declare global {
   interface Window {
     customCards?: Array<Record<string, unknown>>;
@@ -86,6 +100,7 @@ export class NovastarHSeriesCard extends LitElement {
   private resolvingDeviceId?: string;
   private resolvedForHass?: HomeAssistant;
   private lastRelevantStateSignature = "";
+  private activeLayerSourceChooser?: LayerSourceChooser;
 
   static properties = {
     hass: { attribute: false, noAccessor: true },
@@ -483,6 +498,79 @@ export class NovastarHSeriesCard extends LitElement {
       stroke-width: 1;
     }
 
+    .layout-layer-hitbox {
+      cursor: pointer;
+    }
+
+    .layer-source-modal {
+      align-items: center;
+      background: rgba(0, 0, 0, 0.45);
+      border-radius: 6px;
+      display: flex;
+      inset: 12px 0 0;
+      justify-content: center;
+      padding: 12px;
+      position: absolute;
+      z-index: 2;
+    }
+
+    .layer-source-modal-content {
+      background: var(--card-background-color);
+      border: 1px solid var(--divider-color);
+      border-radius: 10px;
+      box-shadow: 0 8px 22px rgba(0, 0, 0, 0.35);
+      color: var(--primary-text-color);
+      max-width: min(420px, 96%);
+      padding: 12px;
+      width: 100%;
+    }
+
+    .layer-source-modal-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .layer-source-modal-options {
+      display: grid;
+      gap: 8px;
+      max-height: 260px;
+      overflow: auto;
+    }
+
+    .layer-source-modal-option {
+      background: var(--card-background-color);
+      border: 1px solid var(--divider-color);
+      border-radius: 8px;
+      color: var(--primary-text-color);
+      cursor: pointer;
+      font: inherit;
+      padding: 8px 10px;
+      text-align: left;
+      width: 100%;
+    }
+
+    .layer-source-modal-option.selected {
+      border-color: var(--primary-color);
+      box-shadow: inset 0 0 0 1px var(--primary-color);
+    }
+
+    .layer-source-modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 10px;
+    }
+
+    .layer-source-modal-close {
+      background: transparent;
+      border: 1px solid var(--divider-color);
+      border-radius: 6px;
+      color: var(--primary-text-color);
+      cursor: pointer;
+      font: inherit;
+      padding: 6px 10px;
+    }
+
     .layout-version {
       bottom: 14px;
       color: #9e9e9e;
@@ -517,7 +605,12 @@ export class NovastarHSeriesCard extends LitElement {
     const layerFill = "#d9d9d9";
     const layerStroke = "#808080";
     const labelFill = "#ffffff";
+    const layerSourceRows = this.getLayerSourceRows();
     const layerSourceLabels = this.getLayerSourceLabelMap();
+    const powerEntityId = this.getEntityId("power_entity") ?? "switch.novastar_h2_power_screen_output";
+    const powerEntity = this.hass?.states[powerEntityId];
+    const powerState = this.optimisticPowerState ?? powerEntity?.state;
+    const powerFadeToBlack = Boolean(powerEntity) && powerState !== "on";
 
     return html`
       <div class="layout-preview">
@@ -543,6 +636,7 @@ export class NovastarHSeriesCard extends LitElement {
             ? svg`<text class="layout-empty" x=${viewBoxWidth / 2} y=${viewBoxHeight / 2}>No layers detected</text>`
             : nothing}
           ${sortedLayers.map((layer, index) => {
+            const layerSourceRow = this.resolveLayerSourceRow(layerSourceRows, layer.id, index);
             const label = this.resolveLayerSourceLabel(layerSourceLabels, layer.id, index)
               ?? layer.source?.trim()
               ?? layer.id;
@@ -587,8 +681,9 @@ export class NovastarHSeriesCard extends LitElement {
             const audioColor = isAudioOpen
               ? "#66bb6a"
               : isAudioMuted
-                ? "#d3d3d3"
+                ? "#858585"
                 : "#bdbdbd";
+            const layerClickable = Boolean(layerSourceRow) && !powerFadeToBlack;
 
             return svg`
               <g>
@@ -655,6 +750,7 @@ export class NovastarHSeriesCard extends LitElement {
                     : nothing}
                 </g>
                 <rect
+                  class=${layerClickable ? "layout-layer-hitbox" : ""}
                   x=${badgeX}
                   y=${badgeY}
                   width=${badgeWidth}
@@ -663,19 +759,25 @@ export class NovastarHSeriesCard extends LitElement {
                   ry=${badgeRadius}
                   fill="#111111"
                   fill-opacity="0.82"
+                  @click=${layerClickable ? () => this.openLayerSourceChooser(layerSourceRow) : nothing}
                 ></rect>
                 <text
+                  class=${layerClickable ? "layout-layer-hitbox" : ""}
                   x=${labelX}
                   y=${labelY}
                   font-weight="700"
                   style=${`fill:${labelFill};font-size:${labelFontSize}px;font-family:inherit;`}
                   text-anchor="middle"
                   dominant-baseline="middle"
+                  @click=${layerClickable ? () => this.openLayerSourceChooser(layerSourceRow) : nothing}
                 >${visibleLabel}</text>
               </g>
             `;
           })}
         </svg>
+        ${this.activeLayerSourceChooser
+          ? this.renderLayerSourceChooser(powerFadeToBlack)
+          : nothing}
       </div>
     `;
   }
@@ -715,6 +817,90 @@ export class NovastarHSeriesCard extends LitElement {
     }
 
     return undefined;
+  }
+
+  private resolveLayerSourceRow(rows: LayerSourceRow[], layerId: string, index: number): LayerSourceRow | undefined {
+    const candidateLayers: number[] = [];
+    const parsedLayerId = Number.parseInt(layerId, 10);
+
+    if (Number.isFinite(parsedLayerId)) {
+      candidateLayers.push(parsedLayerId);
+      candidateLayers.push(parsedLayerId + 1);
+    }
+
+    candidateLayers.push(index);
+    candidateLayers.push(index + 1);
+
+    for (const candidate of candidateLayers) {
+      const match = rows.find((row) => row.layerNumber === candidate);
+      if (match) {
+        return match;
+      }
+    }
+
+    return rows[index];
+  }
+
+  private renderLayerSourceChooser(powerFadeToBlack: boolean) {
+    const chooser = this.activeLayerSourceChooser;
+    if (!chooser) {
+      return nothing;
+    }
+
+    return html`
+      <div class="layer-source-modal" @click=${this.handleLayerSourceModalBackdropClick}>
+        <div class="layer-source-modal-content" @click=${(event: Event) => event.stopPropagation()}>
+          <div class="layer-source-modal-title">Layer ${chooser.layerNumber} Source</div>
+          <div class="layer-source-modal-options">
+            ${chooser.options.map((option) => html`
+              <button
+                type="button"
+                class="layer-source-modal-option ${this.optionEquals(option, chooser.selectedOption) ? "selected" : ""}"
+                ?disabled=${powerFadeToBlack}
+                @click=${() => this.handleLayerSourceModalOptionClick(option)}
+              >${option}</button>
+            `)}
+          </div>
+          <div class="layer-source-modal-actions">
+            <button type="button" class="layer-source-modal-close" @click=${this.closeLayerSourceChooser}>Close</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  private openLayerSourceChooser(row: LayerSourceRow | undefined): void {
+    if (!row) {
+      return;
+    }
+
+    this.activeLayerSourceChooser = {
+      entityId: row.entityId,
+      layerNumber: row.layerNumber,
+      options: row.options,
+      selectedOption: this.resolveSelectedOption(row.entity, row.options)
+    };
+    this.requestUpdate();
+  }
+
+  private closeLayerSourceChooser = (): void => {
+    this.activeLayerSourceChooser = undefined;
+    this.requestUpdate();
+  };
+
+  private handleLayerSourceModalBackdropClick = (): void => {
+    this.closeLayerSourceChooser();
+  };
+
+  private async handleLayerSourceModalOptionClick(option: string): Promise<void> {
+    const chooser = this.activeLayerSourceChooser;
+    const nextOption = option.trim();
+    if (!chooser || !nextOption) {
+      return;
+    }
+
+    await this.selectLayerSourceOption(chooser.entityId, nextOption);
+    this.closeLayerSourceChooser();
   }
 
   private fitLayersToViewport(layers: LayoutLayer[], screenWidth: number, screenHeight: number): ViewLayer[] {
@@ -1192,7 +1378,7 @@ export class NovastarHSeriesCard extends LitElement {
     });
   }
 
-  private getLayerSourceRows(): Array<{ entityId: string; entity: HassEntity; layerNumber: number; options: string[] }> {
+  private getLayerSourceRows(): LayerSourceRow[] {
     if (!this.hass) {
       return [];
     }
@@ -1329,6 +1515,14 @@ export class NovastarHSeriesCard extends LitElement {
     const entityId = target.dataset.entityId;
     const option = target.value?.trim();
     if (!entityId || !option) {
+      return;
+    }
+
+    await this.selectLayerSourceOption(entityId, option);
+  }
+
+  private async selectLayerSourceOption(entityId: string, option: string): Promise<void> {
+    if (!this.hass) {
       return;
     }
 
