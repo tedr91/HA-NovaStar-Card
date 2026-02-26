@@ -518,11 +518,17 @@ export class NovastarHSeriesCard extends LitElement {
     const layerStroke = "#808080";
     const labelFill = "#ffffff";
     const layerCountLabel = `layers: ${sortedLayers.length}`;
+    const geometryDebug = sortedLayers.length === 0
+      ? "geometry: none"
+      : `geometry: ${sortedLayers
+        .map((layer, index) => `${index}:${Math.round(layer.x)},${Math.round(layer.y)} ${Math.round(layer.width)}x${Math.round(layer.height)} z${layer.z}`)
+        .join(" | ")}`;
 
     return html`
       <div class="layout-preview">
         <div class="layout-title">Screen Layout</div>
         <div class="layout-meta">layers: ${sortedLayers.length} · ${NovastarHSeriesCard.LAYOUT_BUILD_MARKER}</div>
+        <div class="layout-meta">${geometryDebug}</div>
         <svg
           class="layout-canvas"
           viewBox=${`0 0 ${viewBoxWidth} ${viewBoxHeight}`}
@@ -562,10 +568,13 @@ export class NovastarHSeriesCard extends LitElement {
           ${sortedLayers.length === 0
             ? html`<text class="layout-empty" x=${viewBoxWidth / 2} y=${viewBoxHeight / 2}>No layers detected</text>`
             : nothing}
-          ${sortedLayers.map((layer) => {
+          ${sortedLayers.map((layer, index) => {
             const label = layer.source?.trim() || layer.id;
             const labelX = layer.x + 2;
             const labelY = layer.y + 10;
+            const hue = (index * 73) % 360;
+            const debugFill = `hsla(${hue}, 100%, 50%, 0.45)`;
+            const debugStroke = `hsl(${hue}, 100%, 65%)`;
 
             return html`
               <g>
@@ -575,10 +584,10 @@ export class NovastarHSeriesCard extends LitElement {
                   y=${layer.y}
                   width=${layer.width}
                   height=${layer.height}
-                  fill=${layerFill}
-                  stroke=${layerStroke}
-                  stroke-width="2"
-                  style=${`fill:${layerFill};stroke:${layerStroke};stroke-width:2;`}
+                  fill=${debugFill}
+                  stroke=${debugStroke}
+                  stroke-width="3"
+                  style=${`fill:${debugFill};stroke:${debugStroke};stroke-width:3;`}
                 ></rect>
                 <text class="layout-label" x=${labelX} y=${labelY} fill=${labelFill}>${label}</text>
               </g>
