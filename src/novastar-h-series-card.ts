@@ -591,12 +591,10 @@ export class NovastarHSeriesCard extends LitElement {
                   fill-opacity="0.82"
                 ></rect>
                 <text
-                  class="layout-label"
                   x=${labelX}
                   y=${labelY}
-                  fill=${labelFill}
-                  font-size=${labelFontSize}
                   font-weight="700"
+                  style=${`fill:${labelFill};font-size:${labelFontSize}px;font-family:inherit;`}
                   text-anchor="middle"
                   dominant-baseline="middle"
                 >${visibleLabel}</text>
