@@ -5,9 +5,9 @@
   "description": "HACS frontend card for Novastar H Series Home Assistant integration",
   "type": "module",
   "scripts": {
-    "build": "esbuild src/novastar-h-series-card.ts --bundle --format=esm --target=es2022 --outfile=novastar-h-series-card.js --minify",
-    "build:dev": "esbuild src/novastar-h-series-card.ts --bundle --format=esm --target=es2022 --outfile=novastar-h-series-card.js --sourcemap",
-    "watch": "esbuild src/novastar-h-series-card.ts --bundle --format=esm --target=es2022 --outfile=novastar-h-series-card.js --sourcemap --watch"
+    "build": "node ./scripts/build.mjs --mode=prod",
+    "build:dev": "node ./scripts/build.mjs --mode=dev",
+    "watch": "node ./scripts/build.mjs --mode=watch"
   },
   "keywords": [
     "home-assistant",

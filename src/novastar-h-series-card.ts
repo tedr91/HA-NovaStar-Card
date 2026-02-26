@@ -1,5 +1,7 @@
 import { LitElement, css, html, nothing } from "lit";
 
+declare const __CARD_VERSION__: string;
+
 type HassEntity = {
   state: string;
   attributes: Record<string, unknown>;
@@ -61,7 +63,7 @@ declare global {
 }
 
 export class NovastarHSeriesCard extends LitElement {
-  private static readonly LAYOUT_BUILD_MARKER = "wm-2026-02-25-1";
+  private static readonly LAYOUT_BUILD_MARKER = __CARD_VERSION__;
 
   private _hass?: HomeAssistant;
 
