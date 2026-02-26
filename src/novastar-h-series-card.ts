@@ -492,6 +492,11 @@ export class NovastarHSeriesCard extends LitElement {
     const viewBoxWidth = payload.screenWidth;
     const viewBoxHeight = payload.screenHeight;
     const sortedLayers = [...payload.layers].sort((a, b) => a.z - b.z);
+    const screenFill = "#000000";
+    const screenStroke = "#4a4a4a";
+    const layerFill = "#d9d9d9";
+    const layerStroke = "#808080";
+    const labelFill = "#ffffff";
 
     return html`
       <div class="layout-preview">
@@ -503,7 +508,16 @@ export class NovastarHSeriesCard extends LitElement {
           aria-label="Current screen layout preview"
           preserveAspectRatio="xMidYMid meet"
         >
-          <rect class="layout-screen" x="0" y="0" width=${viewBoxWidth} height=${viewBoxHeight}></rect>
+          <rect
+            class="layout-screen"
+            x="0"
+            y="0"
+            width=${viewBoxWidth}
+            height=${viewBoxHeight}
+            fill=${screenFill}
+            stroke=${screenStroke}
+            stroke-width="1"
+          ></rect>
           ${sortedLayers.length === 0
             ? html`<text class="layout-empty" x=${viewBoxWidth / 2} y=${viewBoxHeight / 2}>No layers detected</text>`
             : nothing}
@@ -520,8 +534,11 @@ export class NovastarHSeriesCard extends LitElement {
                   y=${layer.y}
                   width=${layer.width}
                   height=${layer.height}
+                  fill=${layerFill}
+                  stroke=${layerStroke}
+                  stroke-width="1"
                 ></rect>
-                <text class="layout-label" x=${labelX} y=${labelY}>${label}</text>
+                <text class="layout-label" x=${labelX} y=${labelY} fill=${labelFill}>${label}</text>
               </g>
             `;
           })}
