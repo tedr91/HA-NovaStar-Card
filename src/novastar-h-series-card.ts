@@ -497,6 +497,7 @@ export class NovastarHSeriesCard extends LitElement {
     const layerFill = "#d9d9d9";
     const layerStroke = "#808080";
     const labelFill = "#ffffff";
+    const layerCountLabel = `layers: ${sortedLayers.length}`;
 
     return html`
       <div class="layout-preview">
@@ -517,7 +518,9 @@ export class NovastarHSeriesCard extends LitElement {
             fill=${screenFill}
             stroke=${screenStroke}
             stroke-width="1"
+            style=${`fill:${screenFill};stroke:${screenStroke};stroke-width:1;`}
           ></rect>
+          <text x="10" y="18" fill="#ffd54f" font-size="14" font-family="inherit">${layerCountLabel}</text>
           ${sortedLayers.length === 0
             ? html`<text class="layout-empty" x=${viewBoxWidth / 2} y=${viewBoxHeight / 2}>No layers detected</text>`
             : nothing}
@@ -536,7 +539,8 @@ export class NovastarHSeriesCard extends LitElement {
                   height=${layer.height}
                   fill=${layerFill}
                   stroke=${layerStroke}
-                  stroke-width="1"
+                  stroke-width="2"
+                  style=${`fill:${layerFill};stroke:${layerStroke};stroke-width:2;`}
                 ></rect>
                 <text class="layout-label" x=${labelX} y=${labelY} fill=${labelFill}>${label}</text>
               </g>
