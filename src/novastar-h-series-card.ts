@@ -449,15 +449,15 @@ export class NovastarHSeriesCard extends LitElement {
     }
 
     .layout-screen {
-      fill: none;
-      stroke: var(--divider-color);
+      fill: #000000;
+      stroke: #4a4a4a;
       stroke-width: 1;
     }
 
     .layout-layer {
-      fill: #9e9e9e;
-      fill-opacity: 0.35;
-      stroke: #000000;
+      fill: #d9d9d9;
+      fill-opacity: 1;
+      stroke: #808080;
       stroke-width: 1;
     }
 
