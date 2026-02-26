@@ -2,6 +2,12 @@
 
 Lovelace frontend card for the Novastar H Series Home Assistant integration.
 
+## Prerequisite
+
+This card requires the **HA-novastar-h** Home Assistant device integration to be installed first:
+
+https://github.com/tedr91/HA-novastar-h
+
 ## Features
 
 - Displays a primary controller entity state.
