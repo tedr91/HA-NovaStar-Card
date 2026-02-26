@@ -1,4 +1,4 @@
-import { LitElement, css, html, nothing } from "lit";
+import { LitElement, css, html, nothing, svg } from "lit";
 
 declare const __CARD_VERSION__: string;
 
@@ -566,7 +566,7 @@ export class NovastarHSeriesCard extends LitElement {
           >TEST RECT</text>
           <text x="10" y="18" fill="#ffd54f" font-size="14" font-family="inherit">${layerCountLabel}</text>
           ${sortedLayers.length === 0
-            ? html`<text class="layout-empty" x=${viewBoxWidth / 2} y=${viewBoxHeight / 2}>No layers detected</text>`
+            ? svg`<text class="layout-empty" x=${viewBoxWidth / 2} y=${viewBoxHeight / 2}>No layers detected</text>`
             : nothing}
           ${sortedLayers.map((layer, index) => {
             const label = layer.source?.trim() || layer.id;
@@ -576,7 +576,7 @@ export class NovastarHSeriesCard extends LitElement {
             const debugFill = `hsla(${hue}, 100%, 50%, 0.45)`;
             const debugStroke = `hsl(${hue}, 100%, 65%)`;
 
-            return html`
+            return svg`
               <g>
                 <rect
                   class="layout-layer"
