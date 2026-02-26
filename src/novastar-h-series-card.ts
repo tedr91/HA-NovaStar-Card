@@ -566,6 +566,30 @@ export class NovastarHSeriesCard extends LitElement {
             const badgeY = labelY - (badgeHeight / 2);
             const badgeRadius = Math.max(6, badgeHeight * 0.25);
 
+            const audioIconSize = Math.max(34, Math.min(92, minLayerDimension * 0.18));
+            const audioIconPadding = Math.max(10, audioIconSize * 0.22);
+            const audioIconX = Math.max(layer.x + 4, layer.x + layer.width - audioIconSize - audioIconPadding);
+            const audioIconY = Math.min(layer.y + audioIconPadding, layer.y + layer.height - audioIconSize - 4);
+            const speakerBodyX = audioIconX + (audioIconSize * 0.22);
+            const speakerBodyY = audioIconY + (audioIconSize * 0.34);
+            const speakerBodyWidth = audioIconSize * 0.18;
+            const speakerBodyHeight = audioIconSize * 0.32;
+            const speakerConePoints = [
+              `${speakerBodyX + speakerBodyWidth},${audioIconY + (audioIconSize * 0.26)}`,
+              `${audioIconX + (audioIconSize * 0.68)},${audioIconY + (audioIconSize * 0.16)}`,
+              `${audioIconX + (audioIconSize * 0.68)},${audioIconY + (audioIconSize * 0.84)}`,
+              `${speakerBodyX + speakerBodyWidth},${audioIconY + (audioIconSize * 0.74)}`
+            ].join(" ");
+            const waveBaseX = audioIconX + (audioIconSize * 0.7);
+            const waveCenterY = audioIconY + (audioIconSize * 0.5);
+            const isAudioOpen = layer.audioOpen === true;
+            const isAudioMuted = layer.audioOpen === false;
+            const audioColor = isAudioOpen
+              ? "#66bb6a"
+              : isAudioMuted
+                ? "#ef5350"
+                : "#bdbdbd";
+
             return svg`
               <g>
                 <rect
@@ -579,6 +603,57 @@ export class NovastarHSeriesCard extends LitElement {
                   stroke-width="3"
                   style=${`fill:${layerFill};stroke:${layerStroke};stroke-width:3;`}
                 ></rect>
+                <g>
+                  <rect
+                    x=${audioIconX}
+                    y=${audioIconY}
+                    width=${audioIconSize}
+                    height=${audioIconSize}
+                    rx=${audioIconSize * 0.22}
+                    ry=${audioIconSize * 0.22}
+                    fill="#111111"
+                    fill-opacity="0.8"
+                  ></rect>
+                  <rect
+                    x=${speakerBodyX}
+                    y=${speakerBodyY}
+                    width=${speakerBodyWidth}
+                    height=${speakerBodyHeight}
+                    fill=${audioColor}
+                  ></rect>
+                  <polygon points=${speakerConePoints} fill=${audioColor}></polygon>
+                  ${isAudioOpen
+                    ? svg`
+                      <path
+                        d=${`M ${waveBaseX} ${waveCenterY - (audioIconSize * 0.13)} Q ${waveBaseX + (audioIconSize * 0.12)} ${waveCenterY} ${waveBaseX} ${waveCenterY + (audioIconSize * 0.13)}`}
+                        fill="none"
+                        stroke=${audioColor}
+                        stroke-width=${audioIconSize * 0.06}
+                        stroke-linecap="round"
+                      ></path>
+                      <path
+                        d=${`M ${waveBaseX + (audioIconSize * 0.1)} ${waveCenterY - (audioIconSize * 0.22)} Q ${waveBaseX + (audioIconSize * 0.28)} ${waveCenterY} ${waveBaseX + (audioIconSize * 0.1)} ${waveCenterY + (audioIconSize * 0.22)}`}
+                        fill="none"
+                        stroke=${audioColor}
+                        stroke-width=${audioIconSize * 0.06}
+                        stroke-linecap="round"
+                      ></path>
+                    `
+                    : nothing}
+                  ${isAudioMuted
+                    ? svg`
+                      <line
+                        x1=${audioIconX + (audioIconSize * 0.7)}
+                        y1=${audioIconY + (audioIconSize * 0.24)}
+                        x2=${audioIconX + (audioIconSize * 0.92)}
+                        y2=${audioIconY + (audioIconSize * 0.76)}
+                        stroke=${audioColor}
+                        stroke-width=${audioIconSize * 0.08}
+                        stroke-linecap="round"
+                      ></line>
+                    `
+                    : nothing}
+                </g>
                 <rect
                   x=${badgeX}
                   y=${badgeY}
