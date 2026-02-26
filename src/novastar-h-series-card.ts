@@ -209,7 +209,6 @@ export class NovastarHSeriesCard extends LitElement {
     const brightnessStep = brightnessEntity ? this.readNumberAttribute(brightnessEntity, "step", 1) : 1;
     const showBrightnessSlider = brightnessEntity && Number.isFinite(brightnessValue);
     const presetOptions = this.readStringListAttribute(presetEntity, "options");
-    const layerSourceRows = this.getLayerSourceRows();
     const layoutPayload = this.readLayoutPayload(screensEntity, layersEntity);
     const controllerValue = statusEntity
       ? `${controller.state} (${statusEntity.state})`
@@ -284,28 +283,6 @@ export class NovastarHSeriesCard extends LitElement {
                 })()
               : html`<div class="row"><span class="label">Preset</span><span class="value">${presetEntity.state}</span></div>`
             : nothing}
-          ${layerSourceRows.map((row) => {
-            const selectedOption = this.resolveSelectedOption(row.entity, row.options);
-            return html`
-              <div class="row input-row">
-                <span class="label">Layer ${row.layerNumber} Source</span>
-                <select
-                  class="input-select"
-                  data-entity-id=${row.entityId}
-                  .disabled=${powerFadeToBlack}
-                  ?disabled=${powerFadeToBlack}
-                  @change=${this.handleLayerSourceChanged}
-                >
-                  ${row.options.map((option) => html`
-                    <option
-                      .value=${option}
-                      ?selected=${this.optionEquals(option, selectedOption)}
-                    >${option}</option>
-                  `)}
-                </select>
-              </div>
-            `;
-          })}
           ${layoutPayload
             ? this.renderLayoutPreview(layoutPayload)
             : nothing}
