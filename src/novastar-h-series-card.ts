@@ -553,8 +553,8 @@ export class NovastarHSeriesCard extends LitElement {
             : nothing}
           ${sortedLayers.map((layer, index) => {
             const label = layer.source?.trim() || layer.id;
-            const labelX = layer.x + 2;
-            const labelY = layer.y + 10;
+            const labelX = layer.x + (layer.width / 2);
+            const labelY = layer.y + (layer.height / 2);
 
             return svg`
               <g>
@@ -569,7 +569,14 @@ export class NovastarHSeriesCard extends LitElement {
                   stroke-width="3"
                   style=${`fill:${layerFill};stroke:${layerStroke};stroke-width:3;`}
                 ></rect>
-                <text class="layout-label" x=${labelX} y=${labelY} fill=${labelFill}>${label}</text>
+                <text
+                  class="layout-label"
+                  x=${labelX}
+                  y=${labelY}
+                  fill=${labelFill}
+                  text-anchor="middle"
+                  dominant-baseline="middle"
+                >${label}</text>
               </g>
             `;
           })}
@@ -584,98 +591,37 @@ export class NovastarHSeriesCard extends LitElement {
       return [];
     }
 
-    const minX = Math.min(...layers.map((layer) => layer.x));
-    const minY = Math.min(...layers.map((layer) => layer.y));
-    const maxX = Math.max(...layers.map((layer) => layer.x + layer.width));
-    const maxY = Math.max(...layers.map((layer) => layer.y + layer.height));
+    return layers
+      .map((layer) => {
+        if (!Number.isFinite(layer.x)
+          || !Number.isFinite(layer.y)
+          || !Number.isFinite(layer.width)
+          || !Number.isFinite(layer.height)
+          || layer.width <= 0
+          || layer.height <= 0) {
+          return undefined;
+        }
 
-    const sourceWidth = maxX - minX;
-    const sourceHeight = maxY - minY;
+        const x1 = Math.max(0, layer.x);
+        const y1 = Math.max(0, layer.y);
+        const x2 = Math.min(screenWidth, layer.x + layer.width);
+        const y2 = Math.min(screenHeight, layer.y + layer.height);
+        const clippedWidth = x2 - x1;
+        const clippedHeight = y2 - y1;
 
-    const toVisibleBounds = (layer: LayoutLayer, x: number, y: number, width: number, height: number): ViewLayer => {
-      const minVisibleSize = Math.max(2, Math.min(screenWidth, screenHeight) * 0.01);
-      const fallbackSize = Math.max(24, Math.min(screenWidth, screenHeight) * 0.1);
+        if (clippedWidth <= 0 || clippedHeight <= 0) {
+          return undefined;
+        }
 
-      if (!Number.isFinite(x)
-        || !Number.isFinite(y)
-        || !Number.isFinite(width)
-        || !Number.isFinite(height)
-        || width <= 0
-        || height <= 0) {
         return {
           ...layer,
-          x: 8,
-          y: 8,
-          width: Math.min(fallbackSize, screenWidth),
-          height: Math.min(fallbackSize, screenHeight)
+          x: x1,
+          y: y1,
+          width: clippedWidth,
+          height: clippedHeight
         };
-      }
-
-      const boundedX = Math.min(Math.max(x, 0), Math.max(0, screenWidth - minVisibleSize));
-      const boundedY = Math.min(Math.max(y, 0), Math.max(0, screenHeight - minVisibleSize));
-      const maxWidth = Math.max(minVisibleSize, screenWidth - boundedX);
-      const maxHeight = Math.max(minVisibleSize, screenHeight - boundedY);
-
-      return {
-        ...layer,
-        x: boundedX,
-        y: boundedY,
-        width: Math.min(Math.max(width, minVisibleSize), maxWidth),
-        height: Math.min(Math.max(height, minVisibleSize), maxHeight)
-      };
-    };
-
-    const isAlreadyInViewportSpace = sourceWidth > 0
-      && sourceHeight > 0
-      && minX >= 0
-      && minY >= 0
-      && maxX <= screenWidth
-      && maxY <= screenHeight;
-
-    if (isAlreadyInViewportSpace) {
-      return layers.map((layer) => ({ ...layer }));
-    }
-
-    if (sourceWidth <= 0 || sourceHeight <= 0) {
-      return layers.map((layer) => toVisibleBounds(layer, layer.x, layer.y, layer.width, layer.height));
-    }
-
-    const canTranslateWithoutScaling = sourceWidth <= screenWidth && sourceHeight <= screenHeight;
-    if (canTranslateWithoutScaling) {
-      let offsetX = 0;
-      let offsetY = 0;
-
-      if (minX < 0) {
-        offsetX = -minX;
-      } else if (maxX > screenWidth) {
-        offsetX = screenWidth - maxX;
-      }
-
-      if (minY < 0) {
-        offsetY = -minY;
-      } else if (maxY > screenHeight) {
-        offsetY = screenHeight - maxY;
-      }
-
-      return layers.map((layer) => toVisibleBounds(
-        layer,
-        layer.x + offsetX,
-        layer.y + offsetY,
-        layer.width,
-        layer.height
-      ));
-    }
-
-    const scaleX = screenWidth / sourceWidth;
-    const scaleY = screenHeight / sourceHeight;
-
-    return layers.map((layer) => {
-      const projectedX = (layer.x - minX) * scaleX;
-      const projectedY = (layer.y - minY) * scaleY;
-      const projectedWidth = layer.width * scaleX;
-      const projectedHeight = layer.height * scaleY;
-      return toVisibleBounds(layer, projectedX, projectedY, projectedWidth, projectedHeight);
-    });
+      })
+      .filter((layer): layer is ViewLayer => Boolean(layer));
   }
 
   private readNumberAttribute(entity: HassEntity, key: string, fallbackValue: number): number {
