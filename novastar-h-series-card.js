@@ -245,9 +245,9 @@ var M=globalThis,T=M.ShadowRoot&&(M.ShadyCSS===void 0||M.ShadyCSS.nativeShadow)&
     }
 
     .layout-layer {
-      fill: var(--primary-color);
-      fill-opacity: 0.2;
-      stroke: var(--primary-color);
+      fill: #9e9e9e;
+      fill-opacity: 0.35;
+      stroke: #000000;
       stroke-width: 1;
     }
 
