@@ -467,6 +467,14 @@ export class NovastarHSeriesCard extends LitElement {
       font-family: inherit;
       pointer-events: none;
     }
+
+    .layout-empty {
+      fill: #bdbdbd;
+      font-size: 14px;
+      font-family: inherit;
+      text-anchor: middle;
+      dominant-baseline: middle;
+    }
   `;
 
   private renderLayoutPreview(payload: LayoutPayload) {
@@ -485,6 +493,9 @@ export class NovastarHSeriesCard extends LitElement {
           preserveAspectRatio="xMidYMid meet"
         >
           <rect class="layout-screen" x="0" y="0" width=${viewBoxWidth} height=${viewBoxHeight}></rect>
+          ${sortedLayers.length === 0
+            ? html`<text class="layout-empty" x=${viewBoxWidth / 2} y=${viewBoxHeight / 2}>No layers detected</text>`
+            : nothing}
           ${sortedLayers.map((layer) => {
             const label = layer.source?.trim() || layer.id;
             const labelX = layer.x + 2;
@@ -633,9 +644,11 @@ export class NovastarHSeriesCard extends LitElement {
 
   private readFirstScreen(entity: HassEntity): Record<string, unknown> | undefined {
     const candidates: unknown[] = [
+      entity.state,
       entity.attributes.screens,
       entity.attributes.screen_list,
       entity.attributes.screen,
+      entity.attributes.value,
       entity.attributes.data,
       entity.attributes.layout_json,
       entity.attributes.layout,
@@ -706,6 +719,28 @@ export class NovastarHSeriesCard extends LitElement {
 
       if (Array.isArray(record.layer_list)) {
         return record.layer_list;
+      }
+
+      const resultRecord = this.asRecord(record.result);
+      if (resultRecord && Array.isArray(resultRecord.layers)) {
+        return resultRecord.layers;
+      }
+
+      const dataRecord = this.asRecord(record.data);
+      if (dataRecord && Array.isArray(dataRecord.layers)) {
+        return dataRecord.layers;
+      }
+
+      const objectMapLayers = Object.values(record)
+        .map((item) => this.asRecord(item))
+        .filter((item): item is Record<string, unknown> => Boolean(item))
+        .filter((item) => Boolean(this.asRecord(item.general)) && Boolean(this.asRecord(item.window)));
+      if (objectMapLayers.length > 0) {
+        return objectMapLayers;
+      }
+
+      if (this.asRecord(record.general) && this.asRecord(record.window)) {
+        return [record];
       }
     }
 
