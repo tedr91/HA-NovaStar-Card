@@ -518,17 +518,11 @@ export class NovastarHSeriesCard extends LitElement {
     const layerStroke = "#808080";
     const labelFill = "#ffffff";
     const layerCountLabel = `layers: ${sortedLayers.length}`;
-    const geometryDebug = sortedLayers.length === 0
-      ? "geometry: none"
-      : `geometry: ${sortedLayers
-        .map((layer, index) => `${index}:${Math.round(layer.x)},${Math.round(layer.y)} ${Math.round(layer.width)}x${Math.round(layer.height)} z${layer.z}`)
-        .join(" | ")}`;
 
     return html`
       <div class="layout-preview">
         <div class="layout-title">Screen Layout</div>
         <div class="layout-meta">layers: ${sortedLayers.length} · ${NovastarHSeriesCard.LAYOUT_BUILD_MARKER}</div>
-        <div class="layout-meta">${geometryDebug}</div>
         <svg
           class="layout-canvas"
           viewBox=${`0 0 ${viewBoxWidth} ${viewBoxHeight}`}
@@ -556,8 +550,13 @@ export class NovastarHSeriesCard extends LitElement {
             const labelX = layer.x + (layer.width / 2);
             const labelY = layer.y + (layer.height / 2);
             const minLayerDimension = Math.min(layer.width, layer.height);
-            const labelFontSize = Math.max(32, Math.min(84, minLayerDimension * 0.12));
-            const labelStrokeWidth = Math.max(4, labelFontSize * 0.12);
+            const viewportMinFont = Math.max(56, viewBoxWidth * 0.018);
+            const maxFontByWidth = layer.width / Math.max(1, label.length * 0.62);
+            const maxFontByHeight = layer.height * 0.45;
+            const maxUsableFont = Math.max(24, Math.min(maxFontByWidth, maxFontByHeight));
+            const preferredFont = Math.max(minLayerDimension * 0.2, viewportMinFont);
+            const labelFontSize = Math.min(preferredFont, maxUsableFont);
+            const labelStrokeWidth = Math.max(6, labelFontSize * 0.13);
 
             return svg`
               <g>
@@ -578,9 +577,10 @@ export class NovastarHSeriesCard extends LitElement {
                   y=${labelY}
                   fill=${labelFill}
                   font-size=${labelFontSize}
-                  font-weight="600"
+                  font-weight="700"
                   stroke="#000000"
                   stroke-width=${labelStrokeWidth}
+                  stroke-linejoin="round"
                   paint-order="stroke"
                   text-anchor="middle"
                   dominant-baseline="middle"
