@@ -609,14 +609,45 @@ export class NovastarHSeriesCard extends LitElement {
 
     const scaleX = screenWidth / sourceWidth;
     const scaleY = screenHeight / sourceHeight;
+    const minVisibleSize = Math.max(2, Math.min(screenWidth, screenHeight) * 0.01);
+    const fallbackSize = Math.max(24, Math.min(screenWidth, screenHeight) * 0.1);
 
-    return layers.map((layer) => ({
-      ...layer,
-      x: (layer.x - minX) * scaleX,
-      y: (layer.y - minY) * scaleY,
-      width: layer.width * scaleX,
-      height: layer.height * scaleY
-    }));
+    return layers.map((layer, index) => {
+      const projectedX = (layer.x - minX) * scaleX;
+      const projectedY = (layer.y - minY) * scaleY;
+      const projectedWidth = layer.width * scaleX;
+      const projectedHeight = layer.height * scaleY;
+
+      if (!Number.isFinite(projectedX)
+        || !Number.isFinite(projectedY)
+        || !Number.isFinite(projectedWidth)
+        || !Number.isFinite(projectedHeight)
+        || projectedWidth <= 0
+        || projectedHeight <= 0) {
+        const offsetStep = Math.max(8, fallbackSize * 0.15);
+        const offset = 8 + (index * offsetStep);
+        return {
+          ...layer,
+          x: Math.min(offset, Math.max(0, screenWidth - fallbackSize)),
+          y: Math.min(offset, Math.max(0, screenHeight - fallbackSize)),
+          width: Math.min(fallbackSize, screenWidth),
+          height: Math.min(fallbackSize, screenHeight)
+        };
+      }
+
+      const boundedX = Math.min(Math.max(projectedX, 0), Math.max(0, screenWidth - minVisibleSize));
+      const boundedY = Math.min(Math.max(projectedY, 0), Math.max(0, screenHeight - minVisibleSize));
+      const maxWidth = Math.max(minVisibleSize, screenWidth - boundedX);
+      const maxHeight = Math.max(minVisibleSize, screenHeight - boundedY);
+
+      return {
+        ...layer,
+        x: boundedX,
+        y: boundedY,
+        width: Math.min(Math.max(projectedWidth, minVisibleSize), maxWidth),
+        height: Math.min(Math.max(projectedHeight, minVisibleSize), maxHeight)
+      };
+    });
   }
 
   private readNumberAttribute(entity: HassEntity, key: string, fallbackValue: number): number {
