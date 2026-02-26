@@ -517,12 +517,12 @@ export class NovastarHSeriesCard extends LitElement {
     const layerFill = "#d9d9d9";
     const layerStroke = "#808080";
     const labelFill = "#ffffff";
-    const layerCountLabel = `layers: ${sortedLayers.length}`;
+    const layerSourceLabels = this.getLayerSourceLabelMap();
 
     return html`
       <div class="layout-preview">
         <div class="layout-title">Screen Layout</div>
-        <div class="layout-meta">layers: ${sortedLayers.length} · ${NovastarHSeriesCard.LAYOUT_BUILD_MARKER}</div>
+        <div class="layout-meta">${NovastarHSeriesCard.LAYOUT_BUILD_MARKER}</div>
         <svg
           class="layout-canvas"
           viewBox=${`0 0 ${viewBoxWidth} ${viewBoxHeight}`}
@@ -541,12 +541,13 @@ export class NovastarHSeriesCard extends LitElement {
             stroke-width="1"
             style=${`fill:${screenFill};stroke:${screenStroke};stroke-width:1;`}
           ></rect>
-          <text x="10" y="18" fill="#ffd54f" font-size="14" font-family="inherit">${layerCountLabel}</text>
           ${sortedLayers.length === 0
             ? svg`<text class="layout-empty" x=${viewBoxWidth / 2} y=${viewBoxHeight / 2}>No layers detected</text>`
             : nothing}
-          ${sortedLayers.map((layer) => {
-            const label = layer.source?.trim() || layer.id;
+          ${sortedLayers.map((layer, index) => {
+            const label = this.resolveLayerSourceLabel(layerSourceLabels, layer.id, index)
+              ?? layer.source?.trim()
+              ?? layer.id;
             const labelX = layer.x + (layer.width / 2);
             const labelY = layer.y + (layer.height / 2);
             const minLayerDimension = Math.min(layer.width, layer.height);
@@ -604,6 +605,43 @@ export class NovastarHSeriesCard extends LitElement {
         </svg>
       </div>
     `;
+  }
+
+  private getLayerSourceLabelMap(): Map<number, string> {
+    const labelMap = new Map<number, string>();
+
+    for (const row of this.getLayerSourceRows()) {
+      const selected = this.resolveSelectedOption(row.entity, row.options).trim();
+      if (!selected) {
+        continue;
+      }
+
+      labelMap.set(row.layerNumber, selected);
+    }
+
+    return labelMap;
+  }
+
+  private resolveLayerSourceLabel(labelMap: Map<number, string>, layerId: string, index: number): string | undefined {
+    const candidateLayers: number[] = [];
+    const parsedLayerId = Number.parseInt(layerId, 10);
+
+    if (Number.isFinite(parsedLayerId)) {
+      candidateLayers.push(parsedLayerId);
+      candidateLayers.push(parsedLayerId + 1);
+    }
+
+    candidateLayers.push(index);
+    candidateLayers.push(index + 1);
+
+    for (const candidate of candidateLayers) {
+      const value = labelMap.get(candidate)?.trim();
+      if (value) {
+        return value;
+      }
+    }
+
+    return undefined;
   }
 
   private fitLayersToViewport(layers: LayoutLayer[], screenWidth: number, screenHeight: number): ViewLayer[] {
