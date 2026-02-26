@@ -439,6 +439,12 @@ export class NovastarHSeriesCard extends LitElement {
       position: relative;
     }
 
+    .layout-meta {
+      color: #9e9e9e;
+      font-size: 12px;
+      margin-bottom: 6px;
+    }
+
     .layout-title {
       color: var(--secondary-text-color);
       font-size: 0.9rem;
@@ -504,6 +510,7 @@ export class NovastarHSeriesCard extends LitElement {
     return html`
       <div class="layout-preview">
         <div class="layout-title">Screen Layout</div>
+        <div class="layout-meta">layers: ${sortedLayers.length} · ${NovastarHSeriesCard.LAYOUT_BUILD_MARKER}</div>
         <svg
           class="layout-canvas"
           viewBox=${`0 0 ${viewBoxWidth} ${viewBoxHeight}`}
