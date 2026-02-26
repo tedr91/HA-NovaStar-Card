@@ -550,13 +550,22 @@ export class NovastarHSeriesCard extends LitElement {
             const labelX = layer.x + (layer.width / 2);
             const labelY = layer.y + (layer.height / 2);
             const minLayerDimension = Math.min(layer.width, layer.height);
-            const viewportMinFont = Math.max(56, viewBoxWidth * 0.018);
-            const maxFontByWidth = layer.width / Math.max(1, label.length * 0.62);
-            const maxFontByHeight = layer.height * 0.45;
-            const maxUsableFont = Math.max(24, Math.min(maxFontByWidth, maxFontByHeight));
-            const preferredFont = Math.max(minLayerDimension * 0.2, viewportMinFont);
-            const labelFontSize = Math.min(preferredFont, maxUsableFont);
-            const labelStrokeWidth = Math.max(6, labelFontSize * 0.13);
+            const viewportMinFont = Math.max(54, viewBoxWidth * 0.017);
+            const preferredFont = Math.max(minLayerDimension * 0.14, viewportMinFont);
+            const maxFontByHeight = Math.max(24, layer.height * 0.38);
+            const labelFontSize = Math.min(preferredFont, maxFontByHeight);
+            const horizontalPadding = Math.max(18, labelFontSize * 0.35);
+            const maxLabelWidth = Math.max(32, layer.width * 0.9);
+            const maxChars = Math.max(1, Math.floor((maxLabelWidth - (horizontalPadding * 2)) / Math.max(1, labelFontSize * 0.62)));
+            const visibleLabel = label.length <= maxChars
+              ? label
+              : `${label.slice(0, Math.max(1, maxChars - 1))}…`;
+            const estimatedTextWidth = visibleLabel.length * labelFontSize * 0.62;
+            const badgeWidth = Math.min(maxLabelWidth, estimatedTextWidth + (horizontalPadding * 2));
+            const badgeHeight = Math.max(28, labelFontSize * 1.35);
+            const badgeX = labelX - (badgeWidth / 2);
+            const badgeY = labelY - (badgeHeight / 2);
+            const badgeRadius = Math.max(6, badgeHeight * 0.25);
 
             return svg`
               <g>
@@ -571,6 +580,16 @@ export class NovastarHSeriesCard extends LitElement {
                   stroke-width="3"
                   style=${`fill:${layerFill};stroke:${layerStroke};stroke-width:3;`}
                 ></rect>
+                <rect
+                  x=${badgeX}
+                  y=${badgeY}
+                  width=${badgeWidth}
+                  height=${badgeHeight}
+                  rx=${badgeRadius}
+                  ry=${badgeRadius}
+                  fill="#111111"
+                  fill-opacity="0.82"
+                ></rect>
                 <text
                   class="layout-label"
                   x=${labelX}
@@ -578,13 +597,9 @@ export class NovastarHSeriesCard extends LitElement {
                   fill=${labelFill}
                   font-size=${labelFontSize}
                   font-weight="700"
-                  stroke="#000000"
-                  stroke-width=${labelStrokeWidth}
-                  stroke-linejoin="round"
-                  paint-order="stroke"
                   text-anchor="middle"
                   dominant-baseline="middle"
-                >${label}</text>
+                >${visibleLabel}</text>
               </g>
             `;
           })}
