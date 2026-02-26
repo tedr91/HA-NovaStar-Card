@@ -14,6 +14,7 @@ type HomeAssistant = {
 type NovastarCardConfig = {
   type: string;
   title?: string;
+  debug_layout?: boolean;
   device_id?: string;
   power_entity?: string;
   preset_entity?: string;
@@ -45,7 +46,6 @@ type LayoutLayer = {
   z: number;
   source?: string;
   audioOpen?: boolean;
-  visible: boolean;
 };
 
 type LayoutPayload = {
@@ -588,17 +588,27 @@ export class NovastarHSeriesCard extends LitElement {
     layersEntity: HassEntity | undefined
   ): LayoutPayload | undefined {
     if (!screensEntity || !layersEntity) {
+      this.logLayoutDebug("readLayoutPayload: missing screensEntity or layersEntity", {
+        hasScreensEntity: Boolean(screensEntity),
+        hasLayersEntity: Boolean(layersEntity)
+      });
       return undefined;
     }
 
     const firstScreen = this.readFirstScreen(screensEntity);
     if (!firstScreen) {
+      this.logLayoutDebug("readLayoutPayload: no screen found in screens entity");
       return undefined;
     }
 
     const screenWidth = this.readFiniteNumber(firstScreen.width ?? firstScreen.w);
     const screenHeight = this.readFiniteNumber(firstScreen.height ?? firstScreen.h);
     if (!screenWidth || !screenHeight || screenWidth <= 0 || screenHeight <= 0) {
+      this.logLayoutDebug("readLayoutPayload: invalid screen dimensions", {
+        screenWidth,
+        screenHeight,
+        firstScreen
+      });
       return undefined;
     }
 
@@ -606,6 +616,13 @@ export class NovastarHSeriesCard extends LitElement {
     const layers: LayoutLayer[] = rawLayers
       .map((item, index) => this.normalizeLayoutLayer(item, index))
       .filter((item): item is LayoutLayer => Boolean(item));
+
+    this.logLayoutDebug("readLayoutPayload: parsed layers summary", {
+      rawLayerCount: rawLayers.length,
+      renderedLayerCount: layers.length,
+      screenWidth,
+      screenHeight
+    });
 
     return {
       screenWidth,
@@ -733,6 +750,7 @@ export class NovastarHSeriesCard extends LitElement {
   private normalizeLayoutLayer(value: unknown, index: number): LayoutLayer | undefined {
     const layer = this.asRecord(value);
     if (!layer) {
+      this.logLayoutDebug("normalizeLayoutLayer: skipped - layer is not an object", { index, value });
       return undefined;
     }
 
@@ -741,6 +759,12 @@ export class NovastarHSeriesCard extends LitElement {
     const audioStatus = this.asRecord(layer.audioStatus);
 
     if (!general || !windowData) {
+      this.logLayoutDebug("normalizeLayoutLayer: skipped - missing general or window", {
+        index,
+        hasGeneral: Boolean(general),
+        hasWindow: Boolean(windowData),
+        layer
+      });
       return undefined;
     }
 
@@ -750,16 +774,32 @@ export class NovastarHSeriesCard extends LitElement {
     const y = this.readFiniteNumber(windowData.y) ?? 0;
 
     if (!width || !height || width <= 0 || height <= 0) {
+      this.logLayoutDebug("normalizeLayoutLayer: skipped - invalid dimensions", {
+        index,
+        width,
+        height,
+        windowData
+      });
       return undefined;
     }
 
     const layerId = general.layerId;
     if (typeof layerId !== "string" && typeof layerId !== "number") {
+      this.logLayoutDebug("normalizeLayoutLayer: skipped - invalid layerId", {
+        index,
+        layerId,
+        general
+      });
       return undefined;
     }
 
     const zValue = this.readFiniteNumber(general.zorder);
     if (zValue === undefined) {
+      this.logLayoutDebug("normalizeLayoutLayer: skipped - invalid zorder", {
+        index,
+        zorder: general.zorder,
+        general
+      });
       return undefined;
     }
 
@@ -769,13 +809,18 @@ export class NovastarHSeriesCard extends LitElement {
     const audioOpen = audioStatus?.isOpen === undefined
       ? undefined
       : Boolean(audioStatus.isOpen);
-    const visible = layer.visible === undefined
-      ? true
-      : Boolean(layer.visible);
 
-    if (!visible) {
-      return undefined;
-    }
+    this.logLayoutDebug("normalizeLayoutLayer: accepted", {
+      index,
+      layerId,
+      x,
+      y,
+      width,
+      height,
+      zValue,
+      source,
+      audioOpen
+    });
 
     return {
       id: String(layerId),
@@ -785,9 +830,25 @@ export class NovastarHSeriesCard extends LitElement {
       height,
       z: zValue,
       source,
-      audioOpen,
-      visible
+      audioOpen
     };
+  }
+
+  private isLayoutDebugEnabled(): boolean {
+    return this.config?.debug_layout === true;
+  }
+
+  private logLayoutDebug(message: string, data?: unknown): void {
+    if (!this.isLayoutDebugEnabled()) {
+      return;
+    }
+
+    if (data === undefined) {
+      console.debug("[NovastarCard][layout]", message);
+      return;
+    }
+
+    console.debug("[NovastarCard][layout]", message, data);
   }
 
   private buildRelevantStateSignature(hass: HomeAssistant | undefined): string {
