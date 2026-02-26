@@ -566,7 +566,7 @@ export class NovastarHSeriesCard extends LitElement {
             const badgeY = labelY - (badgeHeight / 2);
             const badgeRadius = Math.max(6, badgeHeight * 0.25);
 
-            const audioIconSize = Math.max(34, Math.min(92, minLayerDimension * 0.18));
+            const audioIconSize = Math.max(51, Math.min(138, minLayerDimension * 0.27));
             const audioIconPadding = Math.max(10, audioIconSize * 0.22);
             const audioIconX = Math.max(layer.x + 4, layer.x + layer.width - audioIconSize - audioIconPadding);
             const audioIconY = Math.min(layer.y + audioIconPadding, layer.y + layer.height - audioIconSize - 4);
@@ -587,7 +587,7 @@ export class NovastarHSeriesCard extends LitElement {
             const audioColor = isAudioOpen
               ? "#66bb6a"
               : isAudioMuted
-                ? "#ef5350"
+                ? "#d3d3d3"
                 : "#bdbdbd";
 
             return svg`
