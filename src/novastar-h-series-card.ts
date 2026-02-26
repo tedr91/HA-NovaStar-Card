@@ -466,14 +466,6 @@ export class NovastarHSeriesCard extends LitElement {
       font-family: inherit;
       pointer-events: none;
     }
-
-    .layout-empty {
-      fill: var(--secondary-text-color);
-      font-size: 12px;
-      font-family: inherit;
-      text-anchor: middle;
-      dominant-baseline: middle;
-    }
   `;
 
   private renderLayoutPreview(payload: LayoutPayload) {
@@ -492,9 +484,6 @@ export class NovastarHSeriesCard extends LitElement {
           preserveAspectRatio="xMidYMid meet"
         >
           <rect class="layout-screen" x="0" y="0" width=${viewBoxWidth} height=${viewBoxHeight}></rect>
-          ${sortedLayers.length === 0
-            ? html`<text class="layout-empty" x=${viewBoxWidth / 2} y=${viewBoxHeight / 2}>No layers detected</text>`
-            : nothing}
           ${sortedLayers.map((layer) => {
             const label = layer.source?.trim() || layer.id;
             const labelX = layer.x + 2;
@@ -606,12 +595,8 @@ export class NovastarHSeriesCard extends LitElement {
       return undefined;
     }
 
-    const screenWidth = this.readFiniteNumber(
-      firstScreen.width ?? firstScreen.w ?? firstScreen.screen_width ?? firstScreen.screen_w ?? firstScreen.resolution_x
-    );
-    const screenHeight = this.readFiniteNumber(
-      firstScreen.height ?? firstScreen.h ?? firstScreen.screen_height ?? firstScreen.screen_h ?? firstScreen.resolution_y
-    );
+    const screenWidth = this.readFiniteNumber(firstScreen.width ?? firstScreen.w);
+    const screenHeight = this.readFiniteNumber(firstScreen.height ?? firstScreen.h);
     if (!screenWidth || !screenHeight || screenWidth <= 0 || screenHeight <= 0) {
       return undefined;
     }
@@ -630,16 +615,13 @@ export class NovastarHSeriesCard extends LitElement {
 
   private readFirstScreen(entity: HassEntity): Record<string, unknown> | undefined {
     const candidates: unknown[] = [
-      entity.state,
       entity.attributes.screens,
       entity.attributes.screen_list,
       entity.attributes.screen,
       entity.attributes.data,
       entity.attributes.layout_json,
       entity.attributes.layout,
-      entity.attributes.screen_layout,
-      entity.attributes.payload,
-      entity.attributes.value
+      entity.attributes.screen_layout
     ];
 
     for (const candidate of candidates) {
@@ -667,19 +649,10 @@ export class NovastarHSeriesCard extends LitElement {
       if (this.readFiniteNumber(record.width ?? record.w) && this.readFiniteNumber(record.height ?? record.h)) {
         return record;
       }
-
-      if (
-        this.readFiniteNumber(record.screen_width ?? record.screen_w ?? record.resolution_x)
-        && this.readFiniteNumber(record.screen_height ?? record.screen_h ?? record.resolution_y)
-      ) {
-        return record;
-      }
     }
 
-    if (
-      this.readFiniteNumber(entity.attributes.width ?? entity.attributes.w ?? entity.attributes.screen_width ?? entity.attributes.screen_w ?? entity.attributes.resolution_x)
-      && this.readFiniteNumber(entity.attributes.height ?? entity.attributes.h ?? entity.attributes.screen_height ?? entity.attributes.screen_h ?? entity.attributes.resolution_y)
-    ) {
+    if (this.readFiniteNumber(entity.attributes.width ?? entity.attributes.w)
+      && this.readFiniteNumber(entity.attributes.height ?? entity.attributes.h)) {
       return entity.attributes;
     }
 
@@ -688,15 +661,12 @@ export class NovastarHSeriesCard extends LitElement {
 
   private readLayersCollection(entity: HassEntity): unknown[] {
     const candidates: unknown[] = [
-      entity.state,
       entity.attributes.layers,
       entity.attributes.layer_list,
       entity.attributes.data,
       entity.attributes.layout_json,
       entity.attributes.layout,
-      entity.attributes.screen_layout,
-      entity.attributes.payload,
-      entity.attributes.value
+      entity.attributes.screen_layout
     ];
 
     for (const candidate of candidates) {
@@ -727,17 +697,8 @@ export class NovastarHSeriesCard extends LitElement {
       return value;
     }
 
-    const trimmed = value.trim();
-    if (!trimmed || trimmed === "unknown" || trimmed === "unavailable" || trimmed === "none") {
-      return undefined;
-    }
-
-    if (!(trimmed.startsWith("{") || trimmed.startsWith("["))) {
-      return value;
-    }
-
     try {
-      return JSON.parse(trimmed);
+      return JSON.parse(value);
     } catch {
       return value;
     }
@@ -772,20 +733,10 @@ export class NovastarHSeriesCard extends LitElement {
       return undefined;
     }
 
-    const layerRect = this.asRecord(layer.rect) ?? this.asRecord(layer.bounds) ?? this.asRecord(layer.area);
-
-    const left = this.readFiniteNumber(layer.x ?? layer.left ?? layerRect?.x ?? layerRect?.left);
-    const top = this.readFiniteNumber(layer.y ?? layer.top ?? layerRect?.y ?? layerRect?.top);
-    const right = this.readFiniteNumber(layer.right ?? layerRect?.right);
-    const bottom = this.readFiniteNumber(layer.bottom ?? layerRect?.bottom);
-
-    const widthFromSize = this.readFiniteNumber(layer.width ?? layer.w ?? layerRect?.width ?? layerRect?.w);
-    const heightFromSize = this.readFiniteNumber(layer.height ?? layer.h ?? layerRect?.height ?? layerRect?.h);
-
-    const x = left ?? 0;
-    const y = top ?? 0;
-    const width = widthFromSize ?? ((right !== undefined && left !== undefined) ? right - left : undefined);
-    const height = heightFromSize ?? ((bottom !== undefined && top !== undefined) ? bottom - top : undefined);
+    const width = this.readFiniteNumber(layer.width ?? layer.w);
+    const height = this.readFiniteNumber(layer.height ?? layer.h);
+    const x = this.readFiniteNumber(layer.x) ?? 0;
+    const y = this.readFiniteNumber(layer.y) ?? 0;
 
     if (!width || !height || width <= 0 || height <= 0) {
       return undefined;
