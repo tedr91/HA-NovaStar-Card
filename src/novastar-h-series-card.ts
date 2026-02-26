@@ -521,8 +521,6 @@ export class NovastarHSeriesCard extends LitElement {
 
     return html`
       <div class="layout-preview">
-        <div class="layout-title">Screen Layout</div>
-        <div class="layout-meta">${NovastarHSeriesCard.LAYOUT_BUILD_MARKER}</div>
         <svg
           class="layout-canvas"
           viewBox=${`0 0 ${viewBoxWidth} ${viewBoxHeight}`}
