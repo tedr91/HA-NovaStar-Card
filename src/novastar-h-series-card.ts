@@ -541,6 +541,23 @@ export class NovastarHSeriesCard extends LitElement {
             stroke-width="1"
             style=${`fill:${screenFill};stroke:${screenStroke};stroke-width:1;`}
           ></rect>
+          <rect
+            x=${viewBoxWidth * 0.1}
+            y=${viewBoxHeight * 0.1}
+            width=${viewBoxWidth * 0.25}
+            height=${viewBoxHeight * 0.15}
+            fill="#ff00ff"
+            stroke="#ffffff"
+            stroke-width="3"
+            style="fill:#ff00ff;stroke:#ffffff;stroke-width:3;"
+          ></rect>
+          <text
+            x=${viewBoxWidth * 0.1 + 8}
+            y=${viewBoxHeight * 0.1 + 20}
+            fill="#ffffff"
+            font-size="14"
+            font-family="inherit"
+          >TEST RECT</text>
           <text x="10" y="18" fill="#ffd54f" font-size="14" font-family="inherit">${layerCountLabel}</text>
           ${sortedLayers.length === 0
             ? html`<text class="layout-empty" x=${viewBoxWidth / 2} y=${viewBoxHeight / 2}>No layers detected</text>`
@@ -586,14 +603,7 @@ export class NovastarHSeriesCard extends LitElement {
     const sourceWidth = maxX - minX;
     const sourceHeight = maxY - minY;
 
-    const needsFit = minX < 0
-      || minY < 0
-      || maxX > screenWidth
-      || maxY > screenHeight
-      || sourceWidth <= 0
-      || sourceHeight <= 0;
-
-    if (!needsFit || sourceWidth <= 0 || sourceHeight <= 0) {
+    if (sourceWidth <= 0 || sourceHeight <= 0) {
       return layers.map((layer) => ({ ...layer }));
     }
 
