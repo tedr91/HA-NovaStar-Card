@@ -551,10 +551,13 @@ export class NovastarHSeriesCard extends LitElement {
           ${sortedLayers.length === 0
             ? svg`<text class="layout-empty" x=${viewBoxWidth / 2} y=${viewBoxHeight / 2}>No layers detected</text>`
             : nothing}
-          ${sortedLayers.map((layer, index) => {
+          ${sortedLayers.map((layer) => {
             const label = layer.source?.trim() || layer.id;
             const labelX = layer.x + (layer.width / 2);
             const labelY = layer.y + (layer.height / 2);
+            const minLayerDimension = Math.min(layer.width, layer.height);
+            const labelFontSize = Math.max(32, Math.min(84, minLayerDimension * 0.12));
+            const labelStrokeWidth = Math.max(4, labelFontSize * 0.12);
 
             return svg`
               <g>
@@ -574,6 +577,11 @@ export class NovastarHSeriesCard extends LitElement {
                   x=${labelX}
                   y=${labelY}
                   fill=${labelFill}
+                  font-size=${labelFontSize}
+                  font-weight="600"
+                  stroke="#000000"
+                  stroke-width=${labelStrokeWidth}
+                  paint-order="stroke"
                   text-anchor="middle"
                   dominant-baseline="middle"
                 >${label}</text>
@@ -581,7 +589,6 @@ export class NovastarHSeriesCard extends LitElement {
             `;
           })}
         </svg>
-        <div class="layout-version">${NovastarHSeriesCard.LAYOUT_BUILD_MARKER}</div>
       </div>
     `;
   }
