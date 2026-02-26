@@ -56,6 +56,17 @@ type LayoutPayload = {
   layers: LayoutLayer[];
 };
 
+type ViewLayer = {
+  id: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  z: number;
+  source?: string;
+  audioOpen?: boolean;
+};
+
 declare global {
   interface Window {
     customCards?: Array<Record<string, unknown>>;
@@ -499,7 +510,8 @@ export class NovastarHSeriesCard extends LitElement {
   private renderLayoutPreview(payload: LayoutPayload) {
     const viewBoxWidth = payload.screenWidth;
     const viewBoxHeight = payload.screenHeight;
-    const sortedLayers = [...payload.layers].sort((a, b) => a.z - b.z);
+    const sortedLayers = this.fitLayersToViewport(payload.layers, viewBoxWidth, viewBoxHeight)
+      .sort((a, b) => a.z - b.z);
     const screenFill = "#000000";
     const screenStroke = "#4a4a4a";
     const layerFill = "#d9d9d9";
@@ -559,6 +571,42 @@ export class NovastarHSeriesCard extends LitElement {
         <div class="layout-version">${NovastarHSeriesCard.LAYOUT_BUILD_MARKER}</div>
       </div>
     `;
+  }
+
+  private fitLayersToViewport(layers: LayoutLayer[], screenWidth: number, screenHeight: number): ViewLayer[] {
+    if (layers.length === 0) {
+      return [];
+    }
+
+    const minX = Math.min(...layers.map((layer) => layer.x));
+    const minY = Math.min(...layers.map((layer) => layer.y));
+    const maxX = Math.max(...layers.map((layer) => layer.x + layer.width));
+    const maxY = Math.max(...layers.map((layer) => layer.y + layer.height));
+
+    const sourceWidth = maxX - minX;
+    const sourceHeight = maxY - minY;
+
+    const needsFit = minX < 0
+      || minY < 0
+      || maxX > screenWidth
+      || maxY > screenHeight
+      || sourceWidth <= 0
+      || sourceHeight <= 0;
+
+    if (!needsFit || sourceWidth <= 0 || sourceHeight <= 0) {
+      return layers.map((layer) => ({ ...layer }));
+    }
+
+    const scaleX = screenWidth / sourceWidth;
+    const scaleY = screenHeight / sourceHeight;
+
+    return layers.map((layer) => ({
+      ...layer,
+      x: (layer.x - minX) * scaleX,
+      y: (layer.y - minY) * scaleY,
+      width: layer.width * scaleX,
+      height: layer.height * scaleY
+    }));
   }
 
   private readNumberAttribute(entity: HassEntity, key: string, fallbackValue: number): number {
