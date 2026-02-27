@@ -39,6 +39,7 @@ type: module
 ```yaml
 type: custom:novastar-h-series-card
 title: Novastar H Series
+display_mode: full
 controller_entity: sensor.novastar_h_series_controller
 status_entity: sensor.novastar_h_series_status
 brightness_entity: sensor.novastar_h_series_brightness
@@ -46,6 +47,19 @@ temperature_entity: sensor.novastar_h_series_temperature
 ```
 
 `controller_entity` is required. All other fields are optional.
+
+`display_mode` options:
+- `full` (default): full card with status/controls plus layout preview.
+- `layout`: layout-only output (screen layout and layer source interaction only).
+
+Layout-only example:
+
+```yaml
+type: custom:novastar-h-series-card
+title: Novastar Layout
+display_mode: layout
+device_id: YOUR_DEVICE_ID
+```
 
 ## Development
 

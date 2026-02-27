@@ -16,6 +16,7 @@ type HomeAssistant = {
 type NovastarCardConfig = {
   type: string;
   title?: string;
+  display_mode?: "full" | "layout";
   debug_layout?: boolean;
   device_id?: string;
   power_entity?: string;
@@ -213,87 +214,106 @@ export class NovastarHSeriesCard extends LitElement {
     const controllerValue = statusEntity
       ? `${controller.state} (${statusEntity.state})`
       : controller.state;
+    const layoutOnlyMode = this.getDisplayMode() === "layout";
 
     return html`
       <ha-card>
         <div class="header-row">
           <div class="header">${this.config.title ?? "Novastar H Series"}</div>
-          <div class="header-controls">
-            ${brightnessEntity && showBrightnessSlider
-              ? html`
-                  <div class="header-brightness" title="Brightness">
-                    <input
-                      class="brightness-slider header-brightness-slider"
-                      type="range"
-                      min=${brightnessMin}
-                      max=${brightnessMax}
-                      step=${brightnessStep}
-                      .value=${String(brightnessValue)}
-                      .disabled=${powerFadeToBlack}
-                      ?disabled=${powerFadeToBlack}
-                      @change=${this.handleBrightnessChanged}
-                    />
-                  </div>
-                `
-              : nothing}
-            ${powerEntity
-              ? html`
-                  <label class="power-toggle" title="Toggle screen output">
-                    <input
-                      type="checkbox"
-                      .checked=${powerIsOn}
-                      @change=${this.handlePowerToggle}
-                    />
-                    <span class="power-slider"></span>
-                  </label>
-                `
-              : nothing}
-          </div>
+          ${layoutOnlyMode
+            ? nothing
+            : html`
+                <div class="header-controls">
+                  ${brightnessEntity && showBrightnessSlider
+                    ? html`
+                        <div class="header-brightness" title="Brightness">
+                          <input
+                            class="brightness-slider header-brightness-slider"
+                            type="range"
+                            min=${brightnessMin}
+                            max=${brightnessMax}
+                            step=${brightnessStep}
+                            .value=${String(brightnessValue)}
+                            .disabled=${powerFadeToBlack}
+                            ?disabled=${powerFadeToBlack}
+                            @change=${this.handleBrightnessChanged}
+                          />
+                        </div>
+                      `
+                    : nothing}
+                  ${powerEntity
+                    ? html`
+                        <label class="power-toggle" title="Toggle screen output">
+                          <input
+                            type="checkbox"
+                            .checked=${powerIsOn}
+                            @change=${this.handlePowerToggle}
+                          />
+                          <span class="power-slider"></span>
+                        </label>
+                      `
+                    : nothing}
+                </div>
+              `}
         </div>
         <div class="content">
-          <div class="row">
-            <span class="label">Status</span>
-            <span class="value">${controllerValue}</span>
-          </div>
-          ${temperatureEntity
-            ? html`<div class="row"><span class="label">Temperature</span><span class="value">${temperatureEntity.state}</span></div>`
-            : nothing}
-          ${presetEntity
-            ? presetOptions.length > 0
-              ? (() => {
-                  const selectedPresetOption = this.resolveSelectedOption(presetEntity, presetOptions);
-                  return html`
-                    <div class="row input-row">
-                      <span class="label">Preset</span>
-                      <select
-                        class="input-select"
-                        .disabled=${powerFadeToBlack}
-                        ?disabled=${powerFadeToBlack}
-                        @change=${this.handlePresetSelectionChanged}
-                      >
-                        ${presetOptions.map((option) => html`
-                          <option
-                            .value=${option}
-                            ?selected=${this.optionEquals(option, selectedPresetOption)}
-                          >${option}</option>
-                        `) }
-                      </select>
-                    </div>
-                  `;
-                })()
-              : html`<div class="row"><span class="label">Preset</span><span class="value">${presetEntity.state}</span></div>`
-            : nothing}
+          ${layoutOnlyMode
+            ? nothing
+            : html`
+                <div class="row">
+                  <span class="label">Status</span>
+                  <span class="value">${controllerValue}</span>
+                </div>
+                ${temperatureEntity
+                  ? html`<div class="row"><span class="label">Temperature</span><span class="value">${temperatureEntity.state}</span></div>`
+                  : nothing}
+                ${presetEntity
+                  ? presetOptions.length > 0
+                    ? (() => {
+                        const selectedPresetOption = this.resolveSelectedOption(presetEntity, presetOptions);
+                        return html`
+                          <div class="row input-row">
+                            <span class="label">Preset</span>
+                            <select
+                              class="input-select"
+                              .disabled=${powerFadeToBlack}
+                              ?disabled=${powerFadeToBlack}
+                              @change=${this.handlePresetSelectionChanged}
+                            >
+                              ${presetOptions.map((option) => html`
+                                <option
+                                  .value=${option}
+                                  ?selected=${this.optionEquals(option, selectedPresetOption)}
+                                >${option}</option>
+                              `) }
+                            </select>
+                          </div>
+                        `;
+                      })()
+                    : html`<div class="row"><span class="label">Preset</span><span class="value">${presetEntity.state}</span></div>`
+                  : nothing}
+              `}
           ${layoutPayload
             ? this.renderLayoutPreview(layoutPayload)
-            : nothing}
-          ${brightnessEntity
-            ? showBrightnessSlider
-              ? nothing
-              : html`<div class="row"><span class="label">Brightness</span><span class="value">${brightnessEntity.state}</span></div>`
-            : nothing}
+            : layoutOnlyMode
+              ? html`<div class="row"><span class="label">Layout</span><span class="value">Unavailable</span></div>`
+              : nothing}
+          ${layoutOnlyMode
+            ? nothing
+            : brightnessEntity
+              ? showBrightnessSlider
+                ? nothing
+                : html`<div class="row"><span class="label">Brightness</span><span class="value">${brightnessEntity.state}</span></div>`
+              : nothing}
         </div>
       </ha-card>
     `;
+  }
+
+  private getDisplayMode(): "full" | "layout" {
+    return this.config?.display_mode === "layout"
+      ? "layout"
+      : "full";
   }
 
   static styles = css`
@@ -1705,6 +1725,17 @@ class NovastarHSeriesCardEditor extends LitElement {
           .configValue=${"title"}
           @input=${this.handleInputChanged}
         ></ha-textfield>
+        <label class="select-label" for="display-mode-select">Display mode</label>
+        <select
+          id="display-mode-select"
+          class="editor-select"
+          .value=${this.config.display_mode ?? "full"}
+          .configValue=${"display_mode"}
+          @change=${this.handleInputChanged}
+        >
+          <option value="full">Full</option>
+          <option value="layout">Layout only</option>
+        </select>
         ${hasDevicePicker
           ? html`
               <ha-device-picker
@@ -1838,9 +1869,12 @@ class NovastarHSeriesCardEditor extends LitElement {
     }
 
     const nextConfig: NovastarCardConfig = { ...this.config };
+    const normalizedValue = configValue === "display_mode" && nextValue === "full"
+      ? ""
+      : nextValue;
 
-    if (nextValue) {
-      (nextConfig[configValue] as string) = nextValue;
+    if (normalizedValue) {
+      (nextConfig[configValue] as string) = normalizedValue;
     } else {
       delete nextConfig[configValue];
     }
@@ -1977,6 +2011,22 @@ class NovastarHSeriesCardEditor extends LitElement {
 
     .readonly {
       opacity: 0.9;
+    }
+
+    .select-label {
+      color: var(--secondary-text-color);
+      font-size: 0.9rem;
+      margin-bottom: -6px;
+    }
+
+    .editor-select {
+      background: var(--card-background-color);
+      border: 1px solid var(--divider-color);
+      border-radius: 6px;
+      color: var(--primary-text-color);
+      font: inherit;
+      padding: 6px 8px;
+      width: 100%;
     }
 
     .overrides {
