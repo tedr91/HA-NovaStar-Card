@@ -338,7 +338,7 @@ export class NovastarHSeriesCard extends LitElement {
     }
 
     .content--compact {
-      padding-top: 0;
+      padding-top: 16px;
     }
 
     .row {
