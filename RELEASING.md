@@ -1,5 +1,15 @@
 # Releasing Novastar H Series Card
 
+## Copilot keyword contract
+
+When you ask Copilot using these phrases, it should perform the matching release type automatically:
+
+- `release` -> patch release (`npm run release`)
+- `minor release` -> minor release (`npm run release:minor`)
+- `major release` -> major release (`npm run release:major`)
+
+Each flow bumps version, builds with version marker, commits, tags, pushes, and creates a GitHub Release.
+
 ## Standard release flow
 
 1. Confirm working tree changes to release:
@@ -22,6 +32,13 @@
    - `git push origin HEAD`
    - `git push origin vX.Y.Z`
 9. Publish GitHub release notes.
+
+## One-command automation
+
+- Patch: `npm run release`
+- Minor: `npm run release:minor`
+- Major: `npm run release:major`
+- Dry-run: `npm run release:dry-run`
 
 ## Notes
 

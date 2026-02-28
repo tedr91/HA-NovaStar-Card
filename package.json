@@ -1,13 +1,17 @@
 {
   "name": "novastar-h-series-card",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "private": true,
   "description": "HACS frontend card for Novastar H Series Home Assistant integration",
   "type": "module",
   "scripts": {
     "build": "node ./scripts/build.mjs --mode=prod",
     "build:dev": "node ./scripts/build.mjs --mode=dev",
-    "watch": "node ./scripts/build.mjs --mode=watch"
+    "watch": "node ./scripts/build.mjs --mode=watch",
+    "release": "node ./scripts/release.mjs patch",
+    "release:minor": "node ./scripts/release.mjs minor",
+    "release:major": "node ./scripts/release.mjs major",
+    "release:dry-run": "node ./scripts/release.mjs patch --dry-run"
   },
   "keywords": [
     "home-assistant",
