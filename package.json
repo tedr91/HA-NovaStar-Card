@@ -1,6 +1,6 @@
 {
   "name": "novastar-h-series-card",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "private": true,
   "description": "HACS frontend card for Novastar H Series Home Assistant integration",
   "type": "module",

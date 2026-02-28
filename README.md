@@ -52,12 +52,17 @@ temperature_entity: sensor.novastar_h_series_temperature
 - `full` (default): full card with status/controls plus layout preview.
 - `layout`: layout-only output (screen layout and layer source interaction only).
 
+`show_title_in_layout` options:
+- `false` (default): hide the title bar in layout mode.
+- `true`: show the title bar in layout mode.
+
 Layout-only example:
 
 ```yaml
 type: custom:novastar-h-series-card
 title: Novastar Layout
 display_mode: layout
+show_title_in_layout: true
 device_id: YOUR_DEVICE_ID
 ```
 

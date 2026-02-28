@@ -17,6 +17,7 @@ type NovastarCardConfig = {
   type: string;
   title?: string;
   display_mode?: "full" | "layout";
+  show_title_in_layout?: boolean;
   debug_layout?: boolean;
   device_id?: string;
   power_entity?: string;
@@ -215,14 +216,15 @@ export class NovastarHSeriesCard extends LitElement {
       ? `${controller.state} (${statusEntity.state})`
       : controller.state;
     const layoutOnlyMode = this.getDisplayMode() === "layout";
+    const showTitleInLayout = this.config.show_title_in_layout === true;
 
     return html`
       <ha-card>
-        <div class="header-row">
-          <div class="header">${this.config.title ?? "Novastar H Series"}</div>
-          ${layoutOnlyMode
-            ? nothing
-            : html`
+        ${layoutOnlyMode && !showTitleInLayout
+          ? nothing
+          : html`
+              <div class="header-row">
+                <div class="header">${this.config.title ?? "Novastar H Series"}</div>
                 <div class="header-controls">
                   ${brightnessEntity && showBrightnessSlider
                     ? html`
@@ -254,8 +256,8 @@ export class NovastarHSeriesCard extends LitElement {
                       `
                     : nothing}
                 </div>
-              `}
-        </div>
+              </div>
+            `}
         <div class="content">
           ${layoutOnlyMode
             ? nothing
@@ -1716,6 +1718,8 @@ class NovastarHSeriesCardEditor extends LitElement {
     const hasDevicePicker = Boolean(customElements.get("ha-device-picker"));
     const effectiveDeviceId = this.config.device_id?.trim() || this.localDeviceId || this.autoDetectedDeviceId || "";
     const selectedDeviceLabel = this.getSelectedDeviceLabel(effectiveDeviceId);
+    const layoutModeSelected = (this.config.display_mode ?? "full") === "layout";
+    const showTitleInLayout = this.config.show_title_in_layout === true;
 
     return html`
       <div class="editor">
@@ -1736,6 +1740,17 @@ class NovastarHSeriesCardEditor extends LitElement {
           <option value="full">Full</option>
           <option value="layout">Layout only</option>
         </select>
+        <label class="checkbox-row">
+          <input
+            type="checkbox"
+            .checked=${showTitleInLayout}
+            .disabled=${!layoutModeSelected}
+            ?disabled=${!layoutModeSelected}
+            .configValue=${"show_title_in_layout"}
+            @change=${this.handleBooleanInputChanged}
+          />
+          <span>Show title bar in layout mode</span>
+        </label>
         ${hasDevicePicker
           ? html`
               <ha-device-picker
@@ -1842,6 +1857,16 @@ class NovastarHSeriesCardEditor extends LitElement {
     this.updateConfigValue(configValue, nextValue);
   }
 
+  private handleBooleanInputChanged(event: Event): void {
+    const target = event.target as EventTarget & { configValue?: keyof NovastarCardConfig; checked?: boolean };
+    const configValue = target.configValue;
+    if (!configValue) {
+      return;
+    }
+
+    this.updateBooleanConfigValue(configValue, Boolean(target.checked));
+  }
+
   private handleEntityChanged(event: CustomEvent<{ value?: string }>): void {
     const target = event.target as EventTarget & { configValue?: keyof NovastarCardConfig };
     const configValue = target.configValue;
@@ -1875,6 +1900,37 @@ class NovastarHSeriesCardEditor extends LitElement {
 
     if (normalizedValue) {
       (nextConfig[configValue] as string) = normalizedValue;
+    } else {
+      delete nextConfig[configValue];
+    }
+
+    if (!nextConfig.type) {
+      nextConfig.type = "custom:novastar-h-series-card";
+    }
+
+    if (!nextConfig.controller_entity) {
+      nextConfig.controller_entity = "";
+    }
+
+    this.config = nextConfig;
+    this.dispatchEvent(
+      new CustomEvent("config-changed", {
+        detail: { config: nextConfig },
+        bubbles: true,
+        composed: true
+      })
+    );
+  }
+
+  private updateBooleanConfigValue(configValue: keyof NovastarCardConfig, nextValue: boolean): void {
+    const currentValue = this.config[configValue] === true;
+    if (currentValue === nextValue) {
+      return;
+    }
+
+    const nextConfig: NovastarCardConfig = { ...this.config };
+    if (nextValue) {
+      (nextConfig[configValue] as boolean) = true;
     } else {
       delete nextConfig[configValue];
     }
@@ -2027,6 +2083,18 @@ class NovastarHSeriesCardEditor extends LitElement {
       font: inherit;
       padding: 6px 8px;
       width: 100%;
+    }
+
+    .checkbox-row {
+      align-items: center;
+      color: var(--primary-text-color);
+      display: inline-flex;
+      font-size: 0.95rem;
+      gap: 8px;
+    }
+
+    .checkbox-row input {
+      margin: 0;
     }
 
     .overrides {
