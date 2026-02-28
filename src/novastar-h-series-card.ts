@@ -217,6 +217,7 @@ export class NovastarHSeriesCard extends LitElement {
       : controller.state;
     const layoutOnlyMode = this.getDisplayMode() === "layout";
     const showTitleInLayout = this.config.show_title_in_layout === true;
+    const compactLayoutMode = layoutOnlyMode && !showTitleInLayout;
 
     return html`
       <ha-card>
@@ -258,7 +259,7 @@ export class NovastarHSeriesCard extends LitElement {
                 </div>
               </div>
             `}
-        <div class="content">
+        <div class=${compactLayoutMode ? "content content--compact" : "content"}>
           ${layoutOnlyMode
             ? nothing
             : html`
@@ -296,7 +297,7 @@ export class NovastarHSeriesCard extends LitElement {
                   : nothing}
               `}
           ${layoutPayload
-            ? this.renderLayoutPreview(layoutPayload)
+            ? this.renderLayoutPreview(layoutPayload, compactLayoutMode)
             : layoutOnlyMode
               ? html`<div class="row"><span class="label">Layout</span><span class="value">Unavailable</span></div>`
               : nothing}
@@ -334,6 +335,10 @@ export class NovastarHSeriesCard extends LitElement {
 
     .content {
       padding: 16px;
+    }
+
+    .content--compact {
+      padding-top: 0;
     }
 
     .row {
@@ -462,6 +467,12 @@ export class NovastarHSeriesCard extends LitElement {
       border-top: 1px solid var(--divider-color);
       padding-top: 12px;
       position: relative;
+    }
+
+    .layout-preview--compact {
+      margin-top: 0;
+      border-top: none;
+      padding-top: 0;
     }
 
     .layout-meta {
@@ -594,7 +605,7 @@ export class NovastarHSeriesCard extends LitElement {
     }
   `;
 
-  private renderLayoutPreview(payload: LayoutPayload) {
+  private renderLayoutPreview(payload: LayoutPayload, compactMode = false) {
     const viewBoxWidth = payload.screenWidth;
     const viewBoxHeight = payload.screenHeight;
     const sortedLayers = this.fitLayersToViewport(payload.layers, viewBoxWidth, viewBoxHeight)
@@ -612,7 +623,7 @@ export class NovastarHSeriesCard extends LitElement {
     const powerFadeToBlack = Boolean(powerEntity) && powerState !== "on";
 
     return html`
-      <div class="layout-preview">
+      <div class=${compactMode ? "layout-preview layout-preview--compact" : "layout-preview"}>
         <svg
           class="layout-canvas"
           viewBox=${`0 0 ${viewBoxWidth} ${viewBoxHeight}`}
