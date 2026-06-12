@@ -1990,50 +1990,44 @@ export class NovastarHSeriesCard extends LitElement {
   }
 }
 
+const NOVASTAR_EDITOR_FIELD_LABELS: Record<string, string> = {
+  header: "Header",
+  display_mode: "Display mode",
+  theme: "Theme styling",
+  show_header_in_compact: "Show header in Compact mode",
+  device_id: "Device",
+  power_entity: "Power entity",
+  preset_entity: "Preset selection entity",
+  screens_entity: "Screens entity",
+  layers_entity: "Layers entity",
+  controller_entity: "Controller entity",
+  status_entity: "Status entity",
+  brightness_entity: "Brightness entity",
+  temperature_entity: "Temperature entity"
+};
+
 class NovastarHSeriesCardEditor extends LitElement {
   public hass?: HomeAssistant;
 
   private config: NovastarCardConfig = {
     type: "custom:novastar-h-series-card"
   };
-  private showOverrides = false;
-  private localDeviceId?: string;
-  private autoDetectedDeviceId?: string;
-  private deviceNameById: Record<string, string> = {};
-  private loadingDeviceNames = false;
   private attemptedAutoDeviceDefault = false;
 
   static properties = {
     hass: { attribute: false },
-    config: { attribute: false },
-    showOverrides: { attribute: false }
+    config: { attribute: false }
   };
 
   public setConfig(config: NovastarCardConfig): void {
     const nextConfig: NovastarCardConfig = { ...config };
     nextConfig.type ||= "custom:novastar-h-series-card";
     this.config = nextConfig;
-    const configuredDeviceId = nextConfig.device_id?.trim();
-    if (configuredDeviceId) {
-      this.localDeviceId = configuredDeviceId;
-      this.autoDetectedDeviceId = configuredDeviceId;
-    }
-    this.showOverrides = Boolean(
-      nextConfig.power_entity
-      || nextConfig.preset_entity
-      || nextConfig.screens_entity
-      || nextConfig.layers_entity
-      || nextConfig.controller_entity
-      || nextConfig.status_entity
-      || nextConfig.brightness_entity
-      || nextConfig.temperature_entity
-    );
     this.attemptedAutoDeviceDefault = false;
   }
 
   protected updated(): void {
     void this.ensureDefaultDeviceId();
-    void this.ensureDeviceNames();
   }
 
   protected render() {
@@ -2041,215 +2035,134 @@ class NovastarHSeriesCardEditor extends LitElement {
       return nothing;
     }
 
-    const hasDevicePicker = Boolean(customElements.get("ha-device-picker"));
-    const effectiveDeviceId = this.config.device_id?.trim() || this.localDeviceId || this.autoDetectedDeviceId || "";
-    const selectedDeviceLabel = this.getSelectedDeviceLabel(effectiveDeviceId);
-    const compactModeSelected = (this.config.display_mode ?? "standard") === "compact";
-    const showHeaderInCompact = this.config.show_header_in_compact === true;
+    const data: NovastarCardConfig = {
+      display_mode: "standard",
+      theme: "nova",
+      ...this.config
+    };
 
     return html`
-      <div class="editor">
-        <ha-textfield
-          label="Header"
-          .value=${this.config.header ?? ""}
-          .configValue=${"header"}
-          @input=${this.handleInputChanged}
-        ></ha-textfield>
-        <label class="select-label" for="display-mode-select">Display mode</label>
-        <select
-          id="display-mode-select"
-          class="editor-select"
-          .value=${this.config.display_mode ?? "standard"}
-          .configValue=${"display_mode"}
-          @change=${this.handleInputChanged}
-        >
-          <option value="detailed">Detailed</option>
-          <option value="standard">Standard</option>
-          <option value="compact">Compact</option>
-        </select>
-        <label class="checkbox-row">
-          <input
-            type="checkbox"
-            .checked=${showHeaderInCompact}
-            .disabled=${!compactModeSelected}
-            ?disabled=${!compactModeSelected}
-            .configValue=${"show_header_in_compact"}
-            @change=${this.handleBooleanInputChanged}
-          />
-          <span>Show header in Compact mode</span>
-        </label>
-        <label class="select-label" for="theme-select">Theme styling</label>
-        <select
-          id="theme-select"
-          class="editor-select"
-          .value=${this.config.theme ?? "nova"}
-          .configValue=${"theme"}
-          @change=${this.handleInputChanged}
-        >
-          <option value="nova">Nova (default)</option>
-          <option value="ha">Home Assistant theme</option>
-        </select>
-        ${hasDevicePicker
-          ? html`
-              <ha-device-picker
-                .hass=${this.hass}
-                label="Device picker (optional)"
-                .value=${effectiveDeviceId}
-                .configValue=${"device_id"}
-                @value-changed=${this.handleEntityChanged}
-              ></ha-device-picker>
-            `
-          : html`
-              <ha-textfield
-                label="Device ID"
-                .value=${effectiveDeviceId}
-                .configValue=${"device_id"}
-                @input=${this.handleInputChanged}
-              ></ha-textfield>
-              <div class="helper">Device picker is unavailable in this Home Assistant frontend. Manually enter Device ID of novastar_h device above (note: auto-defaults to first available novastar_h device).</div>
-            `}
-        <ha-textfield
-          class="readonly"
-          label="Selected Device ID"
-          .value=${selectedDeviceLabel}
-          readonly
-        ></ha-textfield>
-        <details class="overrides" .open=${this.showOverrides} @toggle=${this.handleOverridesToggle}>
-          <summary>Override Entities</summary>
-          <div class="overrides-content">
-            <ha-entity-picker
-              .hass=${this.hass}
-              label="Power entity (optional override)"
-              .value=${this.config.power_entity ?? ""}
-              .configValue=${"power_entity"}
-              @value-changed=${this.handleEntityChanged}
-            ></ha-entity-picker>
-            <ha-entity-picker
-              .hass=${this.hass}
-              label="Preset selection entity (optional override)"
-              .value=${this.config.preset_entity ?? ""}
-              .configValue=${"preset_entity"}
-              @value-changed=${this.handleEntityChanged}
-            ></ha-entity-picker>
-            <ha-entity-picker
-              .hass=${this.hass}
-              label="Screens entity (optional override)"
-              .value=${this.config.screens_entity ?? ""}
-              .configValue=${"screens_entity"}
-              @value-changed=${this.handleEntityChanged}
-            ></ha-entity-picker>
-            <ha-entity-picker
-              .hass=${this.hass}
-              label="Layers entity (optional override)"
-              .value=${this.config.layers_entity ?? ""}
-              .configValue=${"layers_entity"}
-              @value-changed=${this.handleEntityChanged}
-            ></ha-entity-picker>
-            <ha-entity-picker
-              .hass=${this.hass}
-              label="Controller entity (optional override)"
-              .value=${this.config.controller_entity ?? ""}
-              .configValue=${"controller_entity"}
-              @value-changed=${this.handleEntityChanged}
-            ></ha-entity-picker>
-            <ha-entity-picker
-              .hass=${this.hass}
-              label="Status entity (optional)"
-              .value=${this.config.status_entity ?? ""}
-              .configValue=${"status_entity"}
-              @value-changed=${this.handleEntityChanged}
-            ></ha-entity-picker>
-            <ha-entity-picker
-              .hass=${this.hass}
-              label="Brightness entity (optional)"
-              .value=${this.config.brightness_entity ?? ""}
-              .configValue=${"brightness_entity"}
-              @value-changed=${this.handleEntityChanged}
-            ></ha-entity-picker>
-            <ha-entity-picker
-              .hass=${this.hass}
-              label="Temperature entity (optional)"
-              .value=${this.config.temperature_entity ?? ""}
-              .configValue=${"temperature_entity"}
-              @value-changed=${this.handleEntityChanged}
-            ></ha-entity-picker>
-          </div>
-        </details>
-      </div>
+      <ha-form
+        .hass=${this.hass}
+        .data=${data}
+        .schema=${this.buildSchema()}
+        .computeLabel=${this.computeLabel}
+        @value-changed=${this.handleValueChanged}
+      ></ha-form>
     `;
   }
 
-  private handleOverridesToggle(event: Event): void {
-    const target = event.target as HTMLDetailsElement;
-    this.showOverrides = target.open;
+  private buildSchema(): Array<Record<string, unknown>> {
+    const displayMode = this.config.display_mode ?? "standard";
+    const hasOverride = Boolean(
+      this.config.power_entity
+      || this.config.preset_entity
+      || this.config.screens_entity
+      || this.config.layers_entity
+      || this.config.controller_entity
+      || this.config.status_entity
+      || this.config.brightness_entity
+      || this.config.temperature_entity
+    );
+
+    const schema: Array<Record<string, unknown>> = [
+      { name: "header", selector: { text: { placeholder: "Novastar H Series" } } },
+      {
+        name: "display_mode",
+        required: true,
+        selector: {
+          select: {
+            mode: "dropdown",
+            options: [
+              { value: "detailed", label: "Detailed" },
+              { value: "standard", label: "Standard" },
+              { value: "compact", label: "Compact" }
+            ]
+          }
+        }
+      },
+      {
+        name: "theme",
+        required: true,
+        selector: {
+          select: {
+            mode: "dropdown",
+            options: [
+              { value: "nova", label: "Nova (default)" },
+              { value: "ha", label: "Home Assistant theme" }
+            ]
+          }
+        }
+      }
+    ];
+
+    if (displayMode === "compact") {
+      schema.push({ name: "show_header_in_compact", selector: { boolean: {} } });
+    }
+
+    schema.push({
+      name: "device_id",
+      selector: { device: { filter: { integration: "novastar_h" } } }
+    });
+
+    schema.push({
+      name: "",
+      type: "expandable",
+      title: "Override entities",
+      flatten: true,
+      expanded: hasOverride,
+      schema: [
+        { name: "power_entity", selector: { entity: {} } },
+        { name: "preset_entity", selector: { entity: {} } },
+        { name: "screens_entity", selector: { entity: {} } },
+        { name: "layers_entity", selector: { entity: {} } },
+        { name: "controller_entity", selector: { entity: {} } },
+        { name: "status_entity", selector: { entity: {} } },
+        { name: "brightness_entity", selector: { entity: {} } },
+        { name: "temperature_entity", selector: { entity: {} } }
+      ]
+    });
+
+    return schema;
   }
 
-  private handleInputChanged(event: Event): void {
-    const target = event.target as EventTarget & { configValue?: keyof NovastarCardConfig; value?: string };
-    const configValue = target.configValue;
-    if (!configValue) {
-      return;
+  private computeLabel = (schema: { name: string }): string => {
+    return NOVASTAR_EDITOR_FIELD_LABELS[schema.name] ?? schema.name;
+  };
+
+  private handleValueChanged = (event: CustomEvent<{ value: NovastarCardConfig }>): void => {
+    event.stopPropagation();
+
+    const nextConfig: NovastarCardConfig = { ...event.detail.value };
+    nextConfig.type = "custom:novastar-h-series-card";
+
+    if (nextConfig.display_mode === "standard") {
+      delete nextConfig.display_mode;
+    }
+    if (nextConfig.theme === "nova") {
+      delete nextConfig.theme;
+    }
+    if (nextConfig.show_header_in_compact !== true) {
+      delete nextConfig.show_header_in_compact;
     }
 
-    const nextValue = target.value?.trim() ?? "";
-    this.updateConfigValue(configValue, nextValue);
-  }
-
-  private handleBooleanInputChanged(event: Event): void {
-    const target = event.target as EventTarget & { configValue?: keyof NovastarCardConfig; checked?: boolean };
-    const configValue = target.configValue;
-    if (!configValue) {
-      return;
-    }
-
-    this.updateBooleanConfigValue(configValue, Boolean(target.checked));
-  }
-
-  private handleEntityChanged(event: CustomEvent<{ value?: string }>): void {
-    const target = event.target as EventTarget & { configValue?: keyof NovastarCardConfig };
-    const configValue = target.configValue;
-    if (!configValue) {
-      return;
-    }
-
-    if (!event.detail || event.detail.value === undefined) {
-      return;
-    }
-
-    const nextValue = event.detail.value?.trim() ?? "";
-    this.updateConfigValue(configValue, nextValue);
-  }
-
-  private updateConfigValue(configValue: keyof NovastarCardConfig, nextValue: string): void {
-    if (configValue === "device_id") {
-      this.localDeviceId = nextValue || undefined;
-      this.autoDetectedDeviceId = nextValue || this.autoDetectedDeviceId;
-    }
-
-    const currentValue = (this.config[configValue] as string | undefined) ?? "";
-    if (currentValue === nextValue) {
-      return;
-    }
-
-    const nextConfig: NovastarCardConfig = { ...this.config };
-    const normalizedValue =
-      (configValue === "display_mode" && nextValue === "standard")
-      || (configValue === "theme" && nextValue === "nova")
-        ? ""
-        : nextValue;
-
-    if (normalizedValue) {
-      (nextConfig[configValue] as string) = normalizedValue;
-    } else {
-      delete nextConfig[configValue];
-    }
-
-    if (!nextConfig.type) {
-      nextConfig.type = "custom:novastar-h-series-card";
-    }
-
-    if (!nextConfig.controller_entity) {
-      nextConfig.controller_entity = "";
+    const optionalKeys: Array<keyof NovastarCardConfig> = [
+      "header",
+      "device_id",
+      "power_entity",
+      "preset_entity",
+      "screens_entity",
+      "layers_entity",
+      "controller_entity",
+      "status_entity",
+      "brightness_entity",
+      "temperature_entity"
+    ];
+    for (const key of optionalKeys) {
+      const value = nextConfig[key];
+      if (value === undefined || value === null || (typeof value === "string" && value.trim() === "")) {
+        delete nextConfig[key];
+      }
     }
 
     this.config = nextConfig;
@@ -2260,38 +2173,7 @@ class NovastarHSeriesCardEditor extends LitElement {
         composed: true
       })
     );
-  }
-
-  private updateBooleanConfigValue(configValue: keyof NovastarCardConfig, nextValue: boolean): void {
-    const currentValue = this.config[configValue] === true;
-    if (currentValue === nextValue) {
-      return;
-    }
-
-    const nextConfig: NovastarCardConfig = { ...this.config };
-    if (nextValue) {
-      (nextConfig[configValue] as boolean) = true;
-    } else {
-      delete nextConfig[configValue];
-    }
-
-    if (!nextConfig.type) {
-      nextConfig.type = "custom:novastar-h-series-card";
-    }
-
-    if (!nextConfig.controller_entity) {
-      nextConfig.controller_entity = "";
-    }
-
-    this.config = nextConfig;
-    this.dispatchEvent(
-      new CustomEvent("config-changed", {
-        detail: { config: nextConfig },
-        bubbles: true,
-        composed: true
-      })
-    );
-  }
+  };
 
   private async ensureDefaultDeviceId(): Promise<void> {
     if (this.attemptedAutoDeviceDefault || !this.hass?.callWS) {
@@ -2329,130 +2211,27 @@ class NovastarHSeriesCardEditor extends LitElement {
         return;
       }
 
-      this.autoDetectedDeviceId = firstNovastarDeviceId;
-      this.localDeviceId = firstNovastarDeviceId;
+      const nextConfig: NovastarCardConfig = {
+        ...this.config,
+        type: "custom:novastar-h-series-card",
+        device_id: firstNovastarDeviceId
+      };
+      this.config = nextConfig;
       this.requestUpdate();
-      this.updateConfigValue("device_id", firstNovastarDeviceId);
+      this.dispatchEvent(
+        new CustomEvent("config-changed", {
+          detail: { config: nextConfig },
+          bubbles: true,
+          composed: true
+        })
+      );
     } catch {
     }
-  }
-
-  private async ensureDeviceNames(): Promise<void> {
-    if (!this.hass?.callWS || this.loadingDeviceNames) {
-      return;
-    }
-
-    const effectiveDeviceId = this.config.device_id ?? this.localDeviceId;
-    if (!effectiveDeviceId || this.deviceNameById[effectiveDeviceId]) {
-      return;
-    }
-
-    this.loadingDeviceNames = true;
-    try {
-      const registry = await this.hass.callWS({ type: "config/device_registry/list" });
-      if (!Array.isArray(registry)) {
-        return;
-      }
-
-      const nextMap: Record<string, string> = { ...this.deviceNameById };
-      for (const entry of registry) {
-        if (!entry || typeof entry !== "object") {
-          continue;
-        }
-
-        const item = entry as Record<string, unknown>;
-        const id = item.id;
-        if (typeof id !== "string") {
-          continue;
-        }
-
-        const preferredName = item.name_by_user ?? item.name ?? item.model;
-        if (typeof preferredName === "string" && preferredName.trim()) {
-          nextMap[id] = preferredName.trim();
-        }
-      }
-
-      this.deviceNameById = nextMap;
-      this.requestUpdate();
-    } catch {
-    } finally {
-      this.loadingDeviceNames = false;
-    }
-  }
-
-  private getSelectedDeviceLabel(effectiveDeviceId: string): string {
-    if (!effectiveDeviceId) {
-      return "Auto-detecting...";
-    }
-
-    const deviceName = this.deviceNameById[effectiveDeviceId];
-    if (!deviceName) {
-      return effectiveDeviceId;
-    }
-
-    return `${deviceName} (${effectiveDeviceId})`;
   }
 
   static styles = css`
-    .editor {
-      display: grid;
-      gap: 12px;
-      padding: 12px 0;
-    }
-
-    .helper {
-      color: var(--secondary-text-color);
-      font-size: 0.9rem;
-    }
-
-    .readonly {
-      opacity: 0.9;
-    }
-
-    .select-label {
-      color: var(--secondary-text-color);
-      font-size: 0.9rem;
-      margin-bottom: -6px;
-    }
-
-    .editor-select {
-      background: var(--card-background-color);
-      border: 1px solid var(--divider-color);
-      border-radius: 6px;
-      color: var(--primary-text-color);
-      font: inherit;
-      padding: 6px 8px;
-      width: 100%;
-    }
-
-    .checkbox-row {
-      align-items: center;
-      color: var(--primary-text-color);
-      display: inline-flex;
-      font-size: 0.95rem;
-      gap: 8px;
-    }
-
-    .checkbox-row input {
-      margin: 0;
-    }
-
-    .overrides {
-      border: 1px solid var(--divider-color);
-      border-radius: 6px;
-      padding: 8px 12px;
-    }
-
-    .overrides summary {
-      cursor: pointer;
-      font-weight: 500;
-      user-select: none;
-    }
-
-    .overrides-content {
-      display: grid;
-      gap: 12px;
-      margin-top: 12px;
+    ha-form {
+      display: block;
     }
   `;
 }
