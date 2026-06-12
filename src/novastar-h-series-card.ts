@@ -108,7 +108,6 @@ export class NovastarHSeriesCard extends LitElement {
   private resolvedForHass?: HomeAssistant;
   private lastRelevantStateSignature = "";
   private activeLayerSourceChooser?: LayerSourceChooser;
-  private brightnessExpanded = false;
 
   static properties = {
     hass: { attribute: false, noAccessor: true },
@@ -260,7 +259,14 @@ export class NovastarHSeriesCard extends LitElement {
                 </div>
                 <div class="header-actions">
                   ${isStandard && showBrightnessSlider
-                    ? this.renderHeaderBrightnessToggle(powerFadeToBlack)
+                    ? this.renderHeaderBrightnessToggle(
+                        brightnessMin,
+                        brightnessMax,
+                        brightnessStep,
+                        brightnessValue,
+                        powerFadeToBlack,
+                        brightnessUnit
+                      )
                     : nothing}
                   ${powerEntity ? this.renderPowerButton(powerIsOn) : nothing}
                 </div>
@@ -313,16 +319,6 @@ export class NovastarHSeriesCard extends LitElement {
                     : nothing}
                 `
               : html`
-                  ${showBrightnessSlider && this.brightnessExpanded && !powerFadeToBlack
-                    ? html`<div class="standard-block">${this.renderBrightnessControl(
-                        brightnessMin,
-                        brightnessMax,
-                        brightnessStep,
-                        brightnessValue,
-                        powerFadeToBlack,
-                        brightnessUnit
-                      )}</div>`
-                    : nothing}
                   ${presetEntity && presetOptions.length > 0
                     ? html`<div class="standard-block standard-block--chips">${this.renderPresetChips(
                         presetOptions,
@@ -375,17 +371,26 @@ export class NovastarHSeriesCard extends LitElement {
     `;
   }
 
-  private renderHeaderBrightnessToggle(disabled: boolean) {
-    const expanded = this.brightnessExpanded && !disabled;
+  private renderHeaderBrightnessToggle(
+    min: number,
+    max: number,
+    step: number,
+    value: number,
+    disabled: boolean,
+    unit: string
+  ) {
+    const span = max - min || 1;
+    const percent = Math.max(0, Math.min(100, Math.round(((value - min) / span) * 100)));
+    const readout = unit ? `${Math.round(value)}${unit}` : `${percent}%`;
     return html`
       <button
         type="button"
-        class="icon-button ${expanded ? "icon-button--active" : ""}"
+        class="icon-button"
+        id="nova-brightness-anchor"
+        popovertarget="nova-brightness-popover"
         aria-label="Adjust brightness"
-        aria-pressed=${expanded ? "true" : "false"}
         title="Adjust brightness"
         ?disabled=${disabled}
-        @click=${this.toggleBrightnessExpanded}
       >
         <svg class="icon-button-icon" viewBox="0 0 24 24" aria-hidden="true">
           <path
@@ -393,12 +398,78 @@ export class NovastarHSeriesCard extends LitElement {
           ></path>
         </svg>
       </button>
+      <div
+        id="nova-brightness-popover"
+        class="brightness-popover"
+        popover
+        @beforetoggle=${this.handleBrightnessPopoverToggle}
+      >
+        <span class="brightness-popover-value">${readout}</span>
+        <input
+          class="brightness-slider-vertical"
+          type="range"
+          orient="vertical"
+          min=${min}
+          max=${max}
+          step=${step}
+          data-unit=${unit}
+          style=${`--nova-brightness-fill:${percent}%`}
+          .value=${String(value)}
+          .disabled=${disabled}
+          ?disabled=${disabled}
+          aria-label="Brightness"
+          @input=${this.handleBrightnessInput}
+          @change=${this.handleBrightnessChanged}
+        />
+        <svg class="brightness-popover-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <path
+            d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zm0-6a1 1 0 0 1 1 1v1.5a1 1 0 1 1-2 0V3a1 1 0 0 1 1-1zm0 16.5a1 1 0 0 1 1 1V21a1 1 0 1 1-2 0v-1.5a1 1 0 0 1 1-1zM4.93 4.93a1 1 0 0 1 1.41 0l1.06 1.06A1 1 0 0 1 5.99 7.4L4.93 6.34a1 1 0 0 1 0-1.41zm11.67 11.67a1 1 0 0 1 1.41 0l1.06 1.06a1 1 0 0 1-1.41 1.41l-1.06-1.06a1 1 0 0 1 0-1.41zM2 12a1 1 0 0 1 1-1h1.5a1 1 0 1 1 0 2H3a1 1 0 0 1-1-1zm17.5 0a1 1 0 0 1 1-1H22a1 1 0 1 1 0 2h-1.5a1 1 0 0 1-1-1zM4.93 19.07a1 1 0 0 1 0-1.41l1.06-1.06a1 1 0 1 1 1.41 1.41l-1.06 1.06a1 1 0 0 1-1.41 0zM16.6 7.4a1 1 0 0 1 0-1.41l1.06-1.06a1 1 0 1 1 1.41 1.41L18.01 7.4a1 1 0 0 1-1.41 0z"
+          ></path>
+        </svg>
+      </div>
     `;
   }
 
-  private toggleBrightnessExpanded = (): void => {
-    this.brightnessExpanded = !this.brightnessExpanded;
-    this.requestUpdate();
+  private handleBrightnessPopoverToggle = (event: Event): void => {
+    const toggleEvent = event as Event & { newState?: string };
+    if (toggleEvent.newState !== "open") {
+      return;
+    }
+
+    const root = this.renderRoot as ShadowRoot;
+    const anchor = root.getElementById("nova-brightness-anchor");
+    const popover = root.getElementById("nova-brightness-popover");
+    if (!anchor || !popover) {
+      return;
+    }
+
+    const rect = anchor.getBoundingClientRect();
+    popover.style.top = `${Math.round(rect.bottom + 8)}px`;
+    popover.style.left = "auto";
+    popover.style.right = `${Math.round(window.innerWidth - rect.right)}px`;
+  };
+
+  private handleBrightnessInput = (event: Event): void => {
+    const input = event.target as HTMLInputElement;
+    const min = Number.parseFloat(input.min);
+    const max = Number.parseFloat(input.max);
+    const value = Number.parseFloat(input.value);
+    if (!Number.isFinite(value)) {
+      return;
+    }
+
+    const lo = Number.isFinite(min) ? min : 0;
+    const hi = Number.isFinite(max) ? max : 100;
+    const span = (hi - lo) || 1;
+    const percent = Math.max(0, Math.min(100, Math.round(((value - lo) / span) * 100)));
+    input.style.setProperty("--nova-brightness-fill", `${percent}%`);
+
+    const popover = input.closest(".brightness-popover");
+    const readout = popover?.querySelector(".brightness-popover-value");
+    if (readout) {
+      const unit = input.dataset.unit ?? "";
+      readout.textContent = unit ? `${Math.round(value)}${unit}` : `${percent}%`;
+    }
   };
 
   private renderBrightnessControl(
@@ -653,6 +724,103 @@ export class NovastarHSeriesCard extends LitElement {
       fill: currentColor;
       height: 20px;
       width: 20px;
+    }
+
+    .brightness-popover {
+      background: var(--nova-surface);
+      border: 1px solid var(--nova-divider);
+      border-radius: var(--nova-radius-sm);
+      box-shadow: 0 18px 48px rgba(0, 0, 0, 0.45);
+      box-sizing: border-box;
+      inset: auto;
+      margin: 0;
+      padding: 14px 12px;
+      position: fixed;
+    }
+
+    .brightness-popover:popover-open {
+      align-items: center;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .brightness-popover::backdrop {
+      background: transparent;
+    }
+
+    .brightness-popover-value {
+      color: var(--nova-text);
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    .brightness-popover-icon {
+      color: var(--nova-muted);
+      fill: currentColor;
+      height: 18px;
+      width: 18px;
+    }
+
+    .brightness-slider-vertical {
+      -webkit-appearance: none;
+      appearance: none;
+      background: transparent;
+      direction: rtl;
+      height: 150px;
+      margin: 0;
+      width: 28px;
+      writing-mode: vertical-lr;
+    }
+
+    .brightness-slider-vertical::-webkit-slider-runnable-track {
+      background: linear-gradient(
+        to top,
+        var(--nova-accent) 0%,
+        var(--nova-accent) var(--nova-brightness-fill, 50%),
+        color-mix(in srgb, var(--nova-text) 18%, transparent) var(--nova-brightness-fill, 50%),
+        color-mix(in srgb, var(--nova-text) 18%, transparent) 100%
+      );
+      border-radius: var(--nova-pill);
+      width: 6px;
+    }
+
+    .brightness-slider-vertical::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      background: var(--nova-surface);
+      border: 1px solid color-mix(in srgb, var(--nova-text) 20%, transparent);
+      border-radius: 50%;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+      height: 22px;
+      margin-left: -8px;
+      width: 22px;
+    }
+
+    .brightness-slider-vertical::-moz-range-track {
+      background: color-mix(in srgb, var(--nova-text) 18%, transparent);
+      border-radius: var(--nova-pill);
+      width: 6px;
+    }
+
+    .brightness-slider-vertical::-moz-range-progress {
+      background: var(--nova-accent);
+      border-radius: var(--nova-pill);
+      width: 6px;
+    }
+
+    .brightness-slider-vertical::-moz-range-thumb {
+      background: var(--nova-surface);
+      border: 1px solid color-mix(in srgb, var(--nova-text) 20%, transparent);
+      border-radius: 50%;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+      height: 22px;
+      width: 22px;
+    }
+
+    .brightness-slider-vertical:disabled {
+      opacity: 0.4;
+      pointer-events: none;
     }
 
     .content {
