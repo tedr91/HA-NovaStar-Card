@@ -425,11 +425,12 @@ export class NovastarHSeriesCard extends LitElement {
       --nova-text: var(--primary-text-color, #1c1c1c);
       --nova-muted: var(--secondary-text-color, #6f6f6f);
       --nova-divider: var(--divider-color, rgba(120, 120, 120, 0.22));
-      --nova-surface: var(--card-background-color, var(--ha-card-background, #ffffff));
+      --nova-surface: var(--ha-card-background, var(--card-background-color, #ffffff));
       --nova-surface-2: color-mix(in srgb, var(--nova-surface) 84%, var(--nova-text) 16%);
       --nova-success: var(--success-color, #43a047);
-      --nova-radius: 16px;
-      --nova-radius-sm: 12px;
+      --nova-screen: #0b0c10;
+      --nova-radius: var(--ha-card-border-radius, 12px);
+      --nova-radius-sm: min(var(--ha-card-border-radius, 12px), 14px);
       --nova-pill: 999px;
       --nova-gap: 14px;
       --nova-touch: 44px;
@@ -437,7 +438,6 @@ export class NovastarHSeriesCard extends LitElement {
     }
 
     ha-card {
-      border-radius: var(--nova-radius);
       overflow: hidden;
     }
 
@@ -446,7 +446,7 @@ export class NovastarHSeriesCard extends LitElement {
       display: flex;
       gap: var(--nova-gap);
       justify-content: space-between;
-      padding: 18px 18px 4px;
+      padding: 16px 16px 4px;
     }
 
     .header-lead {
@@ -539,7 +539,7 @@ export class NovastarHSeriesCard extends LitElement {
       display: flex;
       flex-direction: column;
       gap: var(--nova-gap);
-      padding: 16px 18px 18px;
+      padding: 16px;
     }
 
     .content--standard {
@@ -662,7 +662,7 @@ export class NovastarHSeriesCard extends LitElement {
     .brightness-slider::-webkit-slider-thumb {
       -webkit-appearance: none;
       appearance: none;
-      background: #ffffff;
+      background: var(--nova-surface);
       border: 1px solid color-mix(in srgb, var(--nova-text) 20%, transparent);
       border-radius: 50%;
       box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
@@ -684,7 +684,7 @@ export class NovastarHSeriesCard extends LitElement {
     }
 
     .brightness-slider::-moz-range-thumb {
-      background: #ffffff;
+      background: var(--nova-surface);
       border: 1px solid color-mix(in srgb, var(--nova-text) 20%, transparent);
       border-radius: 50%;
       box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
@@ -755,10 +755,9 @@ export class NovastarHSeriesCard extends LitElement {
     }
 
     .layout-canvas {
-      background: #08090b;
+      background: var(--nova-screen);
       border: 1px solid var(--nova-divider);
       border-radius: var(--nova-radius-sm);
-      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02), 0 6px 18px rgba(0, 0, 0, 0.18);
       display: block;
       width: 100%;
     }
@@ -768,7 +767,7 @@ export class NovastarHSeriesCard extends LitElement {
     }
 
     .layout-screen {
-      fill: #06070a;
+      fill: var(--nova-screen);
       stroke: color-mix(in srgb, var(--nova-text) 22%, #3a3a3a);
     }
 
