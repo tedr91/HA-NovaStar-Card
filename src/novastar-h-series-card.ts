@@ -108,6 +108,7 @@ export class NovastarHSeriesCard extends LitElement {
   private resolvedForHass?: HomeAssistant;
   private lastRelevantStateSignature = "";
   private activeLayerSourceChooser?: LayerSourceChooser;
+  private brightnessExpanded = false;
 
   static properties = {
     hass: { attribute: false, noAccessor: true },
@@ -234,6 +235,7 @@ export class NovastarHSeriesCard extends LitElement {
     const themeMode = this.getThemeMode();
     const isCompact = displayMode === "compact";
     const isDetailed = displayMode === "detailed";
+    const isStandard = displayMode === "standard";
     const showHeaderInCompact = this.config.show_header_in_compact === true;
     const showHeader = !isCompact || showHeaderInCompact;
     const bareLayoutMode = isCompact && !showHeaderInCompact;
@@ -256,7 +258,12 @@ export class NovastarHSeriesCard extends LitElement {
                     : nothing}
                   <div class="header">${headerText}</div>
                 </div>
-                ${powerEntity ? this.renderPowerButton(powerIsOn) : nothing}
+                <div class="header-actions">
+                  ${isStandard && showBrightnessSlider
+                    ? this.renderHeaderBrightnessToggle(powerFadeToBlack)
+                    : nothing}
+                  ${powerEntity ? this.renderPowerButton(powerIsOn) : nothing}
+                </div>
               </div>
             `
           : nothing}
@@ -306,7 +313,7 @@ export class NovastarHSeriesCard extends LitElement {
                     : nothing}
                 `
               : html`
-                  ${showBrightnessSlider
+                  ${showBrightnessSlider && this.brightnessExpanded && !powerFadeToBlack
                     ? html`<div class="standard-block">${this.renderBrightnessControl(
                         brightnessMin,
                         brightnessMax,
@@ -367,6 +374,32 @@ export class NovastarHSeriesCard extends LitElement {
       </button>
     `;
   }
+
+  private renderHeaderBrightnessToggle(disabled: boolean) {
+    const expanded = this.brightnessExpanded && !disabled;
+    return html`
+      <button
+        type="button"
+        class="icon-button ${expanded ? "icon-button--active" : ""}"
+        aria-label="Adjust brightness"
+        aria-pressed=${expanded ? "true" : "false"}
+        title="Adjust brightness"
+        ?disabled=${disabled}
+        @click=${this.toggleBrightnessExpanded}
+      >
+        <svg class="icon-button-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <path
+            d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zm0-6a1 1 0 0 1 1 1v1.5a1 1 0 1 1-2 0V3a1 1 0 0 1 1-1zm0 16.5a1 1 0 0 1 1 1V21a1 1 0 1 1-2 0v-1.5a1 1 0 0 1 1-1zM4.93 4.93a1 1 0 0 1 1.41 0l1.06 1.06A1 1 0 0 1 5.99 7.4L4.93 6.34a1 1 0 0 1 0-1.41zm11.67 11.67a1 1 0 0 1 1.41 0l1.06 1.06a1 1 0 0 1-1.41 1.41l-1.06-1.06a1 1 0 0 1 0-1.41zM2 12a1 1 0 0 1 1-1h1.5a1 1 0 1 1 0 2H3a1 1 0 0 1-1-1zm17.5 0a1 1 0 0 1 1-1H22a1 1 0 1 1 0 2h-1.5a1 1 0 0 1-1-1zM4.93 19.07a1 1 0 0 1 0-1.41l1.06-1.06a1 1 0 1 1 1.41 1.41l-1.06 1.06a1 1 0 0 1-1.41 0zM16.6 7.4a1 1 0 0 1 0-1.41l1.06-1.06a1 1 0 1 1 1.41 1.41L18.01 7.4a1 1 0 0 1-1.41 0z"
+          ></path>
+        </svg>
+      </button>
+    `;
+  }
+
+  private toggleBrightnessExpanded = (): void => {
+    this.brightnessExpanded = !this.brightnessExpanded;
+    this.requestUpdate();
+  };
 
   private renderBrightnessControl(
     min: number,
@@ -564,6 +597,62 @@ export class NovastarHSeriesCard extends LitElement {
         0 2px 8px rgba(0, 0, 0, 0.28),
         inset 0 1px 0 rgba(255, 255, 255, 0.28);
       color: var(--nova-on-accent);
+    }
+
+    .header-actions {
+      align-items: center;
+      display: inline-flex;
+      flex: none;
+      gap: 10px;
+    }
+
+    .icon-button {
+      align-items: center;
+      background: transparent;
+      border: 1px solid var(--nova-divider);
+      border-radius: 50%;
+      box-sizing: border-box;
+      color: var(--nova-muted);
+      cursor: pointer;
+      display: inline-flex;
+      flex: none;
+      height: var(--nova-touch);
+      justify-content: center;
+      padding: 0;
+      transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.08s ease;
+      width: var(--nova-touch);
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .icon-button:hover {
+      border-color: color-mix(in srgb, var(--nova-accent) 45%, var(--nova-divider));
+      color: var(--nova-text);
+    }
+
+    .icon-button:active {
+      transform: scale(0.94);
+    }
+
+    .icon-button:focus-visible {
+      outline: 2px solid var(--nova-accent);
+      outline-offset: 2px;
+    }
+
+    .icon-button:disabled {
+      opacity: 0.4;
+      pointer-events: none;
+    }
+
+    .icon-button--active {
+      background: color-mix(in srgb, var(--nova-accent) 16%, transparent);
+      border-color: var(--nova-accent);
+      color: var(--nova-accent);
+    }
+
+    .icon-button-icon {
+      fill: currentColor;
+      height: 20px;
+      width: 20px;
     }
 
     .content {
