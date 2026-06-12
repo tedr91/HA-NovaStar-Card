@@ -1,355 +1,578 @@
-var nt=globalThis,ot=nt.ShadowRoot&&(nt.ShadyCSS===void 0||nt.ShadyCSS.nativeShadow)&&"adoptedStyleSheets"in Document.prototype&&"replace"in CSSStyleSheet.prototype,pt=Symbol(),Dt=new WeakMap,j=class{constructor(t,e,i){if(this._$cssResult$=!0,i!==pt)throw Error("CSSResult is not constructable. Use `unsafeCSS` or `css` instead.");this.cssText=t,this.t=e}get styleSheet(){let t=this.o,e=this.t;if(ot&&t===void 0){let i=e!==void 0&&e.length===1;i&&(t=Dt.get(e)),t===void 0&&((this.o=t=new CSSStyleSheet).replaceSync(this.cssText),i&&Dt.set(e,t))}return t}toString(){return this.cssText}},Rt=o=>new j(typeof o=="string"?o:o+"",void 0,pt),at=(o,...t)=>{let e=o.length===1?o[0]:t.reduce((i,s,r)=>i+(n=>{if(n._$cssResult$===!0)return n.cssText;if(typeof n=="number")return n;throw Error("Value passed to 'css' function must be a 'css' function result: "+n+". Use 'unsafeCSS' to pass non-literal values, but take care to ensure page security.")})(s)+o[r+1],o[0]);return new j(e,o,pt)},Mt=(o,t)=>{if(ot)o.adoptedStyleSheets=t.map(e=>e instanceof CSSStyleSheet?e:e.styleSheet);else for(let e of t){let i=document.createElement("style"),s=nt.litNonce;s!==void 0&&i.setAttribute("nonce",s),i.textContent=e.cssText,o.appendChild(i)}},yt=ot?o=>o:o=>o instanceof CSSStyleSheet?(t=>{let e="";for(let i of t.cssRules)e+=i.cssText;return Rt(e)})(o):o;var{is:ie,defineProperty:se,getOwnPropertyDescriptor:re,getOwnPropertyNames:ne,getOwnPropertySymbols:oe,getPrototypeOf:ae}=Object,ct=globalThis,Ot=ct.trustedTypes,ce=Ot?Ot.emptyScript:"",de=ct.reactiveElementPolyfillSupport,W=(o,t)=>o,gt={toAttribute(o,t){switch(t){case Boolean:o=o?ce:null;break;case Object:case Array:o=o==null?o:JSON.stringify(o)}return o},fromAttribute(o,t){let e=o;switch(t){case Boolean:e=o!==null;break;case Number:e=o===null?null:Number(o);break;case Object:case Array:try{e=JSON.parse(o)}catch{e=null}}return e}},Tt=(o,t)=>!ie(o,t),Ht={attribute:!0,type:String,converter:gt,reflect:!1,useDefault:!1,hasChanged:Tt};Symbol.metadata??=Symbol("metadata"),ct.litPropertyMetadata??=new WeakMap;var _=class extends HTMLElement{static addInitializer(t){this._$Ei(),(this.l??=[]).push(t)}static get observedAttributes(){return this.finalize(),this._$Eh&&[...this._$Eh.keys()]}static createProperty(t,e=Ht){if(e.state&&(e.attribute=!1),this._$Ei(),this.prototype.hasOwnProperty(t)&&((e=Object.create(e)).wrapped=!0),this.elementProperties.set(t,e),!e.noAccessor){let i=Symbol(),s=this.getPropertyDescriptor(t,i,e);s!==void 0&&se(this.prototype,t,s)}}static getPropertyDescriptor(t,e,i){let{get:s,set:r}=re(this.prototype,t)??{get(){return this[e]},set(n){this[e]=n}};return{get:s,set(n){let a=s?.call(this);r?.call(this,n),this.requestUpdate(t,a,i)},configurable:!0,enumerable:!0}}static getPropertyOptions(t){return this.elementProperties.get(t)??Ht}static _$Ei(){if(this.hasOwnProperty(W("elementProperties")))return;let t=ae(this);t.finalize(),t.l!==void 0&&(this.l=[...t.l]),this.elementProperties=new Map(t.elementProperties)}static finalize(){if(this.hasOwnProperty(W("finalized")))return;if(this.finalized=!0,this._$Ei(),this.hasOwnProperty(W("properties"))){let e=this.properties,i=[...ne(e),...oe(e)];for(let s of i)this.createProperty(s,e[s])}let t=this[Symbol.metadata];if(t!==null){let e=litPropertyMetadata.get(t);if(e!==void 0)for(let[i,s]of e)this.elementProperties.set(i,s)}this._$Eh=new Map;for(let[e,i]of this.elementProperties){let s=this._$Eu(e,i);s!==void 0&&this._$Eh.set(s,e)}this.elementStyles=this.finalizeStyles(this.styles)}static finalizeStyles(t){let e=[];if(Array.isArray(t)){let i=new Set(t.flat(1/0).reverse());for(let s of i)e.unshift(yt(s))}else t!==void 0&&e.push(yt(t));return e}static _$Eu(t,e){let i=e.attribute;return i===!1?void 0:typeof i=="string"?i:typeof t=="string"?t.toLowerCase():void 0}constructor(){super(),this._$Ep=void 0,this.isUpdatePending=!1,this.hasUpdated=!1,this._$Em=null,this._$Ev()}_$Ev(){this._$ES=new Promise(t=>this.enableUpdating=t),this._$AL=new Map,this._$E_(),this.requestUpdate(),this.constructor.l?.forEach(t=>t(this))}addController(t){(this._$EO??=new Set).add(t),this.renderRoot!==void 0&&this.isConnected&&t.hostConnected?.()}removeController(t){this._$EO?.delete(t)}_$E_(){let t=new Map,e=this.constructor.elementProperties;for(let i of e.keys())this.hasOwnProperty(i)&&(t.set(i,this[i]),delete this[i]);t.size>0&&(this._$Ep=t)}createRenderRoot(){let t=this.shadowRoot??this.attachShadow(this.constructor.shadowRootOptions);return Mt(t,this.constructor.elementStyles),t}connectedCallback(){this.renderRoot??=this.createRenderRoot(),this.enableUpdating(!0),this._$EO?.forEach(t=>t.hostConnected?.())}enableUpdating(t){}disconnectedCallback(){this._$EO?.forEach(t=>t.hostDisconnected?.())}attributeChangedCallback(t,e,i){this._$AK(t,i)}_$ET(t,e){let i=this.constructor.elementProperties.get(t),s=this.constructor._$Eu(t,i);if(s!==void 0&&i.reflect===!0){let r=(i.converter?.toAttribute!==void 0?i.converter:gt).toAttribute(e,i.type);this._$Em=t,r==null?this.removeAttribute(s):this.setAttribute(s,r),this._$Em=null}}_$AK(t,e){let i=this.constructor,s=i._$Eh.get(t);if(s!==void 0&&this._$Em!==s){let r=i.getPropertyOptions(s),n=typeof r.converter=="function"?{fromAttribute:r.converter}:r.converter?.fromAttribute!==void 0?r.converter:gt;this._$Em=s;let a=n.fromAttribute(e,r.type);this[s]=a??this._$Ej?.get(s)??a,this._$Em=null}}requestUpdate(t,e,i,s=!1,r){if(t!==void 0){let n=this.constructor;if(s===!1&&(r=this[t]),i??=n.getPropertyOptions(t),!((i.hasChanged??Tt)(r,e)||i.useDefault&&i.reflect&&r===this._$Ej?.get(t)&&!this.hasAttribute(n._$Eu(t,i))))return;this.C(t,e,i)}this.isUpdatePending===!1&&(this._$ES=this._$EP())}C(t,e,{useDefault:i,reflect:s,wrapped:r},n){i&&!(this._$Ej??=new Map).has(t)&&(this._$Ej.set(t,n??e??this[t]),r!==!0||n!==void 0)||(this._$AL.has(t)||(this.hasUpdated||i||(e=void 0),this._$AL.set(t,e)),s===!0&&this._$Em!==t&&(this._$Eq??=new Set).add(t))}async _$EP(){this.isUpdatePending=!0;try{await this._$ES}catch(e){Promise.reject(e)}let t=this.scheduleUpdate();return t!=null&&await t,!this.isUpdatePending}scheduleUpdate(){return this.performUpdate()}performUpdate(){if(!this.isUpdatePending)return;if(!this.hasUpdated){if(this.renderRoot??=this.createRenderRoot(),this._$Ep){for(let[s,r]of this._$Ep)this[s]=r;this._$Ep=void 0}let i=this.constructor.elementProperties;if(i.size>0)for(let[s,r]of i){let{wrapped:n}=r,a=this[s];n!==!0||this._$AL.has(s)||a===void 0||this.C(s,void 0,r,a)}}let t=!1,e=this._$AL;try{t=this.shouldUpdate(e),t?(this.willUpdate(e),this._$EO?.forEach(i=>i.hostUpdate?.()),this.update(e)):this._$EM()}catch(i){throw t=!1,this._$EM(),i}t&&this._$AE(e)}willUpdate(t){}_$AE(t){this._$EO?.forEach(e=>e.hostUpdated?.()),this.hasUpdated||(this.hasUpdated=!0,this.firstUpdated(t)),this.updated(t)}_$EM(){this._$AL=new Map,this.isUpdatePending=!1}get updateComplete(){return this.getUpdateComplete()}getUpdateComplete(){return this._$ES}shouldUpdate(t){return!0}update(t){this._$Eq&&=this._$Eq.forEach(e=>this._$ET(e,this[e])),this._$EM()}updated(t){}firstUpdated(t){}};_.elementStyles=[],_.shadowRootOptions={mode:"open"},_[W("elementProperties")]=new Map,_[W("finalized")]=new Map,de?.({ReactiveElement:_}),(ct.reactiveElementVersions??=[]).push("2.1.2");var wt=globalThis,Bt=o=>o,dt=wt.trustedTypes,Ut=dt?dt.createPolicy("lit-html",{createHTML:o=>o}):void 0,qt="$lit$",x=`lit$${Math.random().toFixed(9).slice(2)}$`,Xt="?"+x,le=`<${Xt}>`,k=document,X=()=>k.createComment(""),Y=o=>o===null||typeof o!="object"&&typeof o!="function",St=Array.isArray,he=o=>St(o)||typeof o?.[Symbol.iterator]=="function",ft=`[ 	
-\f\r]`,q=/<(?:(!--|\/[^a-zA-Z])|(\/?[a-zA-Z][^>\s]*)|(\/?$))/g,zt=/-->/g,Vt=/>/g,C=RegExp(`>|${ft}(?:([^\\s"'>=/]+)(${ft}*=${ft}*(?:[^ 	
-\f\r"'\`<>=]|("|')|))|$)`,"g"),Ft=/'/g,jt=/"/g,Yt=/^(?:script|style|textarea|title)$/i,xt=o=>(t,...e)=>({_$litType$:o,strings:t,values:e}),g=xt(1),J=xt(2),be=xt(3),N=Symbol.for("lit-noChange"),l=Symbol.for("lit-nothing"),Wt=new WeakMap,L=k.createTreeWalker(k,129);function Kt(o,t){if(!St(o)||!o.hasOwnProperty("raw"))throw Error("invalid template strings array");return Ut!==void 0?Ut.createHTML(t):t}var ue=(o,t)=>{let e=o.length-1,i=[],s,r=t===2?"<svg>":t===3?"<math>":"",n=q;for(let a=0;a<e;a++){let c=o[a],d,p,h=-1,f=0;for(;f<c.length&&(n.lastIndex=f,p=n.exec(c),p!==null);)f=n.lastIndex,n===q?p[1]==="!--"?n=zt:p[1]!==void 0?n=Vt:p[2]!==void 0?(Yt.test(p[2])&&(s=RegExp("</"+p[2],"g")),n=C):p[3]!==void 0&&(n=C):n===C?p[0]===">"?(n=s??q,h=-1):p[1]===void 0?h=-2:(h=n.lastIndex-p[2].length,d=p[1],n=p[3]===void 0?C:p[3]==='"'?jt:Ft):n===jt||n===Ft?n=C:n===zt||n===Vt?n=q:(n=C,s=void 0);let v=n===C&&o[a+1].startsWith("/>")?" ":"";r+=n===q?c+le:h>=0?(i.push(d),c.slice(0,h)+qt+c.slice(h)+x+v):c+x+(h===-2?a:v)}return[Kt(o,r+(o[e]||"<?>")+(t===2?"</svg>":t===3?"</math>":"")),i]},K=class o{constructor({strings:t,_$litType$:e},i){let s;this.parts=[];let r=0,n=0,a=t.length-1,c=this.parts,[d,p]=ue(t,e);if(this.el=o.createElement(d,i),L.currentNode=this.el.content,e===2||e===3){let h=this.el.content.firstChild;h.replaceWith(...h.childNodes)}for(;(s=L.nextNode())!==null&&c.length<a;){if(s.nodeType===1){if(s.hasAttributes())for(let h of s.getAttributeNames())if(h.endsWith(qt)){let f=p[n++],v=s.getAttribute(h).split(x),b=/([.?@])?(.*)/.exec(f);c.push({type:1,index:r,name:b[2],strings:v,ctor:b[1]==="."?mt:b[1]==="?"?bt:b[1]==="@"?$t:T}),s.removeAttribute(h)}else h.startsWith(x)&&(c.push({type:6,index:r}),s.removeAttribute(h));if(Yt.test(s.tagName)){let h=s.textContent.split(x),f=h.length-1;if(f>0){s.textContent=dt?dt.emptyScript:"";for(let v=0;v<f;v++)s.append(h[v],X()),L.nextNode(),c.push({type:2,index:++r});s.append(h[f],X())}}}else if(s.nodeType===8)if(s.data===Xt)c.push({type:2,index:r});else{let h=-1;for(;(h=s.data.indexOf(x,h+1))!==-1;)c.push({type:7,index:r}),h+=x.length-1}r++}}static createElement(t,e){let i=k.createElement("template");return i.innerHTML=t,i}};function H(o,t,e=o,i){if(t===N)return t;let s=i!==void 0?e._$Co?.[i]:e._$Cl,r=Y(t)?void 0:t._$litDirective$;return s?.constructor!==r&&(s?._$AO?.(!1),r===void 0?s=void 0:(s=new r(o),s._$AT(o,e,i)),i!==void 0?(e._$Co??=[])[i]=s:e._$Cl=s),s!==void 0&&(t=H(o,s._$AS(o,t.values),s,i)),t}var vt=class{constructor(t,e){this._$AV=[],this._$AN=void 0,this._$AD=t,this._$AM=e}get parentNode(){return this._$AM.parentNode}get _$AU(){return this._$AM._$AU}u(t){let{el:{content:e},parts:i}=this._$AD,s=(t?.creationScope??k).importNode(e,!0);L.currentNode=s;let r=L.nextNode(),n=0,a=0,c=i[0];for(;c!==void 0;){if(n===c.index){let d;c.type===2?d=new G(r,r.nextSibling,this,t):c.type===1?d=new c.ctor(r,c.name,c.strings,this,t):c.type===6&&(d=new _t(r,this,t)),this._$AV.push(d),c=i[++a]}n!==c?.index&&(r=L.nextNode(),n++)}return L.currentNode=k,s}p(t){let e=0;for(let i of this._$AV)i!==void 0&&(i.strings!==void 0?(i._$AI(t,i,e),e+=i.strings.length-2):i._$AI(t[e])),e++}},G=class o{get _$AU(){return this._$AM?._$AU??this._$Cv}constructor(t,e,i,s){this.type=2,this._$AH=l,this._$AN=void 0,this._$AA=t,this._$AB=e,this._$AM=i,this.options=s,this._$Cv=s?.isConnected??!0}get parentNode(){let t=this._$AA.parentNode,e=this._$AM;return e!==void 0&&t?.nodeType===11&&(t=e.parentNode),t}get startNode(){return this._$AA}get endNode(){return this._$AB}_$AI(t,e=this){t=H(this,t,e),Y(t)?t===l||t==null||t===""?(this._$AH!==l&&this._$AR(),this._$AH=l):t!==this._$AH&&t!==N&&this._(t):t._$litType$!==void 0?this.$(t):t.nodeType!==void 0?this.T(t):he(t)?this.k(t):this._(t)}O(t){return this._$AA.parentNode.insertBefore(t,this._$AB)}T(t){this._$AH!==t&&(this._$AR(),this._$AH=this.O(t))}_(t){this._$AH!==l&&Y(this._$AH)?this._$AA.nextSibling.data=t:this.T(k.createTextNode(t)),this._$AH=t}$(t){let{values:e,_$litType$:i}=t,s=typeof i=="number"?this._$AC(t):(i.el===void 0&&(i.el=K.createElement(Kt(i.h,i.h[0]),this.options)),i);if(this._$AH?._$AD===s)this._$AH.p(e);else{let r=new vt(s,this),n=r.u(this.options);r.p(e),this.T(n),this._$AH=r}}_$AC(t){let e=Wt.get(t.strings);return e===void 0&&Wt.set(t.strings,e=new K(t)),e}k(t){St(this._$AH)||(this._$AH=[],this._$AR());let e=this._$AH,i,s=0;for(let r of t)s===e.length?e.push(i=new o(this.O(X()),this.O(X()),this,this.options)):i=e[s],i._$AI(r),s++;s<e.length&&(this._$AR(i&&i._$AB.nextSibling,s),e.length=s)}_$AR(t=this._$AA.nextSibling,e){for(this._$AP?.(!1,!0,e);t!==this._$AB;){let i=Bt(t).nextSibling;Bt(t).remove(),t=i}}setConnected(t){this._$AM===void 0&&(this._$Cv=t,this._$AP?.(t))}},T=class{get tagName(){return this.element.tagName}get _$AU(){return this._$AM._$AU}constructor(t,e,i,s,r){this.type=1,this._$AH=l,this._$AN=void 0,this.element=t,this.name=e,this._$AM=s,this.options=r,i.length>2||i[0]!==""||i[1]!==""?(this._$AH=Array(i.length-1).fill(new String),this.strings=i):this._$AH=l}_$AI(t,e=this,i,s){let r=this.strings,n=!1;if(r===void 0)t=H(this,t,e,0),n=!Y(t)||t!==this._$AH&&t!==N,n&&(this._$AH=t);else{let a=t,c,d;for(t=r[0],c=0;c<r.length-1;c++)d=H(this,a[i+c],e,c),d===N&&(d=this._$AH[c]),n||=!Y(d)||d!==this._$AH[c],d===l?t=l:t!==l&&(t+=(d??"")+r[c+1]),this._$AH[c]=d}n&&!s&&this.j(t)}j(t){t===l?this.element.removeAttribute(this.name):this.element.setAttribute(this.name,t??"")}},mt=class extends T{constructor(){super(...arguments),this.type=3}j(t){this.element[this.name]=t===l?void 0:t}},bt=class extends T{constructor(){super(...arguments),this.type=4}j(t){this.element.toggleAttribute(this.name,!!t&&t!==l)}},$t=class extends T{constructor(t,e,i,s,r){super(t,e,i,s,r),this.type=5}_$AI(t,e=this){if((t=H(this,t,e,0)??l)===N)return;let i=this._$AH,s=t===l&&i!==l||t.capture!==i.capture||t.once!==i.once||t.passive!==i.passive,r=t!==l&&(i===l||s);s&&this.element.removeEventListener(this.name,this,i),r&&this.element.addEventListener(this.name,this,t),this._$AH=t}handleEvent(t){typeof this._$AH=="function"?this._$AH.call(this.options?.host??this.element,t):this._$AH.handleEvent(t)}},_t=class{constructor(t,e,i){this.element=t,this.type=6,this._$AN=void 0,this._$AM=e,this.options=i}get _$AU(){return this._$AM._$AU}_$AI(t){H(this,t)}};var pe=wt.litHtmlPolyfillSupport;pe?.(K,G),(wt.litHtmlVersions??=[]).push("3.3.2");var Gt=(o,t,e)=>{let i=e?.renderBefore??t,s=i._$litPart$;if(s===void 0){let r=e?.renderBefore??null;i._$litPart$=s=new G(t.insertBefore(X(),r),r,void 0,e??{})}return s._$AI(o),s};var Et=globalThis,w=class extends _{constructor(){super(...arguments),this.renderOptions={host:this},this._$Do=void 0}createRenderRoot(){let t=super.createRenderRoot();return this.renderOptions.renderBefore??=t.firstChild,t}update(t){let e=this.render();this.hasUpdated||(this.renderOptions.isConnected=this.isConnected),super.update(t),this._$Do=Gt(e,this.renderRoot,this.renderOptions)}connectedCallback(){super.connectedCallback(),this._$Do?.setConnected(!0)}disconnectedCallback(){super.disconnectedCallback(),this._$Do?.setConnected(!1)}render(){return N}};w._$litElement$=!0,w.finalized=!0,Et.litElementHydrateSupport?.({LitElement:w});var ye=Et.litElementPolyfillSupport;ye?.({LitElement:w});(Et.litElementVersions??=[]).push("4.2.2");var At=class extends w{static LAYOUT_BUILD_MARKER="v1.0.6";_hass;config;optimisticPowerState;resolvedEntities={};resolvedLayerSourceEntities=[];resolvedDeviceId;resolvingDeviceId;resolvedForHass;lastRelevantStateSignature="";activeLayerSourceChooser;static properties={hass:{attribute:!1,noAccessor:!0},config:{attribute:!1}};get hass(){return this._hass}set hass(t){let e=this._hass;this._hass=t;let i=this.buildRelevantStateSignature(t),s=i!==this.lastRelevantStateSignature;this.lastRelevantStateSignature=i,(e!==t||s)&&this.requestUpdate("hass",e)}setConfig(t){let e={...t};e.type||="custom:novastar-h-series-card",this.config=e}getCardSize(){return 3}static async getConfigElement(){return document.createElement("novastar-h-series-card-editor")}static getStubConfig(){return{type:"custom:novastar-h-series-card",title:"Novastar H Series"}}updated(){this.ensureResolvedEntities(),this.syncOptimisticPowerState()}render(){if(!this.config)return g`<ha-card><div class="content">Invalid card configuration.</div></ha-card>`;if(!this.hass)return g`<ha-card><div class="content">Home Assistant context is unavailable.</div></ha-card>`;let t=this.getEntityId("controller_entity");if(!t){let R=this.config.device_id&&this.resolvingDeviceId===this.config.device_id?"Resolving entities for selected device...":"Set a device_id or controller_entity in card configuration.";return g`<ha-card><div class="content">${R}</div></ha-card>`}let e=this.hass.states[t];if(!e)return g`<ha-card><div class="content">Entity not found: ${t}</div></ha-card>`;let i=this.getEntityId("power_entity")??"switch.novastar_h2_power_screen_output",s=this.getEntityId("preset_entity"),r=this.getEntityId("screens_entity"),n=this.getEntityId("layers_entity"),a=this.getEntityId("status_entity"),c=this.getEntityId("brightness_entity"),d=this.getEntityId("temperature_entity"),p=this.hass.states[i],f=(this.optimisticPowerState??p?.state)==="on",v=!!p&&!f,b=a?this.hass.states[a]:void 0,I=s?this.hass.states[s]:void 0,Q=r?this.hass.states[r]:void 0,y=n?this.hass.states[n]:void 0,m=c?this.hass.states[c]:void 0,P=d?this.hass.states[d]:void 0,D=m?Number.parseFloat(m.state):Number.NaN,Z=m?this.readNumberAttribute(m,"min",0):0,tt=m?this.readNumberAttribute(m,"max",100):100,et=m?this.readNumberAttribute(m,"step",1):1,it=m&&Number.isFinite(D),B=this.readStringListAttribute(I,"options"),st=this.readLayoutPayload(Q,y),E=b?`${e.state} (${b.state})`:e.state,S=this.getDisplayMode()==="layout",U=this.config.show_title_in_layout===!0,z=S&&!U;return g`
-      <ha-card>
-        ${S&&!U?l:g`
+var le=globalThis,he=le.ShadowRoot&&(le.ShadyCSS===void 0||le.ShadyCSS.nativeShadow)&&"adoptedStyleSheets"in Document.prototype&&"replace"in CSSStyleSheet.prototype,me=Symbol(),Re=new WeakMap,X=class{constructor(e,t,i){if(this._$cssResult$=!0,i!==me)throw Error("CSSResult is not constructable. Use `unsafeCSS` or `css` instead.");this.cssText=e,this.t=t}get styleSheet(){let e=this.o,t=this.t;if(he&&e===void 0){let i=t!==void 0&&t.length===1;i&&(e=Re.get(t)),e===void 0&&((this.o=e=new CSSStyleSheet).replaceSync(this.cssText),i&&Re.set(t,e))}return e}toString(){return this.cssText}},Oe=o=>new X(typeof o=="string"?o:o+"",void 0,me),ue=(o,...e)=>{let t=o.length===1?o[0]:e.reduce((i,s,r)=>i+(n=>{if(n._$cssResult$===!0)return n.cssText;if(typeof n=="number")return n;throw Error("Value passed to 'css' function must be a 'css' function result: "+n+". Use 'unsafeCSS' to pass non-literal values, but take care to ensure page security.")})(s)+o[r+1],o[0]);return new X(t,o,me)},He=(o,e)=>{if(he)o.adoptedStyleSheets=e.map(t=>t instanceof CSSStyleSheet?t:t.styleSheet);else for(let t of e){let i=document.createElement("style"),s=le.litNonce;s!==void 0&&i.setAttribute("nonce",s),i.textContent=t.cssText,o.appendChild(i)}},be=he?o=>o:o=>o instanceof CSSStyleSheet?(e=>{let t="";for(let i of e.cssRules)t+=i.cssText;return Oe(t)})(o):o;var{is:it,defineProperty:st,getOwnPropertyDescriptor:rt,getOwnPropertyNames:nt,getOwnPropertySymbols:ot,getPrototypeOf:at}=Object,pe=globalThis,ze=pe.trustedTypes,ct=ze?ze.emptyScript:"",dt=pe.reactiveElementPolyfillSupport,G=(o,e)=>o,$e={toAttribute(o,e){switch(e){case Boolean:o=o?ct:null;break;case Object:case Array:o=o==null?o:JSON.stringify(o)}return o},fromAttribute(o,e){let t=o;switch(e){case Boolean:t=o!==null;break;case Number:t=o===null?null:Number(o);break;case Object:case Array:try{t=JSON.parse(o)}catch{t=null}}return t}},Te=(o,e)=>!it(o,e),Be={attribute:!0,type:String,converter:$e,reflect:!1,useDefault:!1,hasChanged:Te};Symbol.metadata??=Symbol("metadata"),pe.litPropertyMetadata??=new WeakMap;var _=class extends HTMLElement{static addInitializer(e){this._$Ei(),(this.l??=[]).push(e)}static get observedAttributes(){return this.finalize(),this._$Eh&&[...this._$Eh.keys()]}static createProperty(e,t=Be){if(t.state&&(t.attribute=!1),this._$Ei(),this.prototype.hasOwnProperty(e)&&((t=Object.create(t)).wrapped=!0),this.elementProperties.set(e,t),!t.noAccessor){let i=Symbol(),s=this.getPropertyDescriptor(e,i,t);s!==void 0&&st(this.prototype,e,s)}}static getPropertyDescriptor(e,t,i){let{get:s,set:r}=rt(this.prototype,e)??{get(){return this[t]},set(n){this[t]=n}};return{get:s,set(n){let a=s?.call(this);r?.call(this,n),this.requestUpdate(e,a,i)},configurable:!0,enumerable:!0}}static getPropertyOptions(e){return this.elementProperties.get(e)??Be}static _$Ei(){if(this.hasOwnProperty(G("elementProperties")))return;let e=at(this);e.finalize(),e.l!==void 0&&(this.l=[...e.l]),this.elementProperties=new Map(e.elementProperties)}static finalize(){if(this.hasOwnProperty(G("finalized")))return;if(this.finalized=!0,this._$Ei(),this.hasOwnProperty(G("properties"))){let t=this.properties,i=[...nt(t),...ot(t)];for(let s of i)this.createProperty(s,t[s])}let e=this[Symbol.metadata];if(e!==null){let t=litPropertyMetadata.get(e);if(t!==void 0)for(let[i,s]of t)this.elementProperties.set(i,s)}this._$Eh=new Map;for(let[t,i]of this.elementProperties){let s=this._$Eu(t,i);s!==void 0&&this._$Eh.set(s,t)}this.elementStyles=this.finalizeStyles(this.styles)}static finalizeStyles(e){let t=[];if(Array.isArray(e)){let i=new Set(e.flat(1/0).reverse());for(let s of i)t.unshift(be(s))}else e!==void 0&&t.push(be(e));return t}static _$Eu(e,t){let i=t.attribute;return i===!1?void 0:typeof i=="string"?i:typeof e=="string"?e.toLowerCase():void 0}constructor(){super(),this._$Ep=void 0,this.isUpdatePending=!1,this.hasUpdated=!1,this._$Em=null,this._$Ev()}_$Ev(){this._$ES=new Promise(e=>this.enableUpdating=e),this._$AL=new Map,this._$E_(),this.requestUpdate(),this.constructor.l?.forEach(e=>e(this))}addController(e){(this._$EO??=new Set).add(e),this.renderRoot!==void 0&&this.isConnected&&e.hostConnected?.()}removeController(e){this._$EO?.delete(e)}_$E_(){let e=new Map,t=this.constructor.elementProperties;for(let i of t.keys())this.hasOwnProperty(i)&&(e.set(i,this[i]),delete this[i]);e.size>0&&(this._$Ep=e)}createRenderRoot(){let e=this.shadowRoot??this.attachShadow(this.constructor.shadowRootOptions);return He(e,this.constructor.elementStyles),e}connectedCallback(){this.renderRoot??=this.createRenderRoot(),this.enableUpdating(!0),this._$EO?.forEach(e=>e.hostConnected?.())}enableUpdating(e){}disconnectedCallback(){this._$EO?.forEach(e=>e.hostDisconnected?.())}attributeChangedCallback(e,t,i){this._$AK(e,i)}_$ET(e,t){let i=this.constructor.elementProperties.get(e),s=this.constructor._$Eu(e,i);if(s!==void 0&&i.reflect===!0){let r=(i.converter?.toAttribute!==void 0?i.converter:$e).toAttribute(t,i.type);this._$Em=e,r==null?this.removeAttribute(s):this.setAttribute(s,r),this._$Em=null}}_$AK(e,t){let i=this.constructor,s=i._$Eh.get(e);if(s!==void 0&&this._$Em!==s){let r=i.getPropertyOptions(s),n=typeof r.converter=="function"?{fromAttribute:r.converter}:r.converter?.fromAttribute!==void 0?r.converter:$e;this._$Em=s;let a=n.fromAttribute(t,r.type);this[s]=a??this._$Ej?.get(s)??a,this._$Em=null}}requestUpdate(e,t,i,s=!1,r){if(e!==void 0){let n=this.constructor;if(s===!1&&(r=this[e]),i??=n.getPropertyOptions(e),!((i.hasChanged??Te)(r,t)||i.useDefault&&i.reflect&&r===this._$Ej?.get(e)&&!this.hasAttribute(n._$Eu(e,i))))return;this.C(e,t,i)}this.isUpdatePending===!1&&(this._$ES=this._$EP())}C(e,t,{useDefault:i,reflect:s,wrapped:r},n){i&&!(this._$Ej??=new Map).has(e)&&(this._$Ej.set(e,n??t??this[e]),r!==!0||n!==void 0)||(this._$AL.has(e)||(this.hasUpdated||i||(t=void 0),this._$AL.set(e,t)),s===!0&&this._$Em!==e&&(this._$Eq??=new Set).add(e))}async _$EP(){this.isUpdatePending=!0;try{await this._$ES}catch(t){Promise.reject(t)}let e=this.scheduleUpdate();return e!=null&&await e,!this.isUpdatePending}scheduleUpdate(){return this.performUpdate()}performUpdate(){if(!this.isUpdatePending)return;if(!this.hasUpdated){if(this.renderRoot??=this.createRenderRoot(),this._$Ep){for(let[s,r]of this._$Ep)this[s]=r;this._$Ep=void 0}let i=this.constructor.elementProperties;if(i.size>0)for(let[s,r]of i){let{wrapped:n}=r,a=this[s];n!==!0||this._$AL.has(s)||a===void 0||this.C(s,void 0,r,a)}}let e=!1,t=this._$AL;try{e=this.shouldUpdate(t),e?(this.willUpdate(t),this._$EO?.forEach(i=>i.hostUpdate?.()),this.update(t)):this._$EM()}catch(i){throw e=!1,this._$EM(),i}e&&this._$AE(t)}willUpdate(e){}_$AE(e){this._$EO?.forEach(t=>t.hostUpdated?.()),this.hasUpdated||(this.hasUpdated=!0,this.firstUpdated(e)),this.updated(e)}_$EM(){this._$AL=new Map,this.isUpdatePending=!1}get updateComplete(){return this.getUpdateComplete()}getUpdateComplete(){return this._$ES}shouldUpdate(e){return!0}update(e){this._$Eq&&=this._$Eq.forEach(t=>this._$ET(t,this[t])),this._$EM()}updated(e){}firstUpdated(e){}};_.elementStyles=[],_.shadowRootOptions={mode:"open"},_[G("elementProperties")]=new Map,_[G("finalized")]=new Map,dt?.({ReactiveElement:_}),(pe.reactiveElementVersions??=[]).push("2.1.2");var Ce=globalThis,Ue=o=>o,ve=Ce.trustedTypes,Ve=ve?ve.createPolicy("lit-html",{createHTML:o=>o}):void 0,Ke="$lit$",A=`lit$${Math.random().toFixed(9).slice(2)}$`,Xe="?"+A,lt=`<${Xe}>`,P=document,Q=()=>P.createComment(""),Z=o=>o===null||typeof o!="object"&&typeof o!="function",ke=Array.isArray,ht=o=>ke(o)||typeof o?.[Symbol.iterator]=="function",_e=`[ 	
+\f\r]`,J=/<(?:(!--|\/[^a-zA-Z])|(\/?[a-zA-Z][^>\s]*)|(\/?$))/g,Fe=/-->/g,je=/>/g,I=RegExp(`>|${_e}(?:([^\\s"'>=/]+)(${_e}*=${_e}*(?:[^ 	
+\f\r"'\`<>=]|("|')|))|$)`,"g"),We=/'/g,qe=/"/g,Ge=/^(?:script|style|textarea|title)$/i,Le=o=>(e,...t)=>({_$litType$:o,strings:e,values:t}),v=Le(1),ie=Le(2),bt=Le(3),D=Symbol.for("lit-noChange"),l=Symbol.for("lit-nothing"),Ye=new WeakMap,M=P.createTreeWalker(P,129);function Je(o,e){if(!ke(o)||!o.hasOwnProperty("raw"))throw Error("invalid template strings array");return Ve!==void 0?Ve.createHTML(e):e}var ut=(o,e)=>{let t=o.length-1,i=[],s,r=e===2?"<svg>":e===3?"<math>":"",n=J;for(let a=0;a<t;a++){let c=o[a],d,p,u=-1,y=0;for(;y<c.length&&(n.lastIndex=y,p=n.exec(c),p!==null);)y=n.lastIndex,n===J?p[1]==="!--"?n=Fe:p[1]!==void 0?n=je:p[2]!==void 0?(Ge.test(p[2])&&(s=RegExp("</"+p[2],"g")),n=I):p[3]!==void 0&&(n=I):n===I?p[0]===">"?(n=s??J,u=-1):p[1]===void 0?u=-2:(u=n.lastIndex-p[2].length,d=p[1],n=p[3]===void 0?I:p[3]==='"'?qe:We):n===qe||n===We?n=I:n===Fe||n===je?n=J:(n=I,s=void 0);let f=n===I&&o[a+1].startsWith("/>")?" ":"";r+=n===J?c+lt:u>=0?(i.push(d),c.slice(0,u)+Ke+c.slice(u)+A+f):c+A+(u===-2?a:f)}return[Je(o,r+(o[t]||"<?>")+(e===2?"</svg>":e===3?"</math>":"")),i]},ee=class o{constructor({strings:e,_$litType$:t},i){let s;this.parts=[];let r=0,n=0,a=e.length-1,c=this.parts,[d,p]=ut(e,t);if(this.el=o.createElement(d,i),M.currentNode=this.el.content,t===2||t===3){let u=this.el.content.firstChild;u.replaceWith(...u.childNodes)}for(;(s=M.nextNode())!==null&&c.length<a;){if(s.nodeType===1){if(s.hasAttributes())for(let u of s.getAttributeNames())if(u.endsWith(Ke)){let y=p[n++],f=s.getAttribute(u).split(A),b=/([.?@])?(.*)/.exec(y);c.push({type:1,index:r,name:b[2],strings:f,ctor:b[1]==="."?we:b[1]==="?"?Se:b[1]==="@"?Ee:U}),s.removeAttribute(u)}else u.startsWith(A)&&(c.push({type:6,index:r}),s.removeAttribute(u));if(Ge.test(s.tagName)){let u=s.textContent.split(A),y=u.length-1;if(y>0){s.textContent=ve?ve.emptyScript:"";for(let f=0;f<y;f++)s.append(u[f],Q()),M.nextNode(),c.push({type:2,index:++r});s.append(u[y],Q())}}}else if(s.nodeType===8)if(s.data===Xe)c.push({type:2,index:r});else{let u=-1;for(;(u=s.data.indexOf(A,u+1))!==-1;)c.push({type:7,index:r}),u+=A.length-1}r++}}static createElement(e,t){let i=P.createElement("template");return i.innerHTML=e,i}};function T(o,e,t=o,i){if(e===D)return e;let s=i!==void 0?t._$Co?.[i]:t._$Cl,r=Z(e)?void 0:e._$litDirective$;return s?.constructor!==r&&(s?._$AO?.(!1),r===void 0?s=void 0:(s=new r(o),s._$AT(o,t,i)),i!==void 0?(t._$Co??=[])[i]=s:t._$Cl=s),s!==void 0&&(e=T(o,s._$AS(o,e.values),s,i)),e}var xe=class{constructor(e,t){this._$AV=[],this._$AN=void 0,this._$AD=e,this._$AM=t}get parentNode(){return this._$AM.parentNode}get _$AU(){return this._$AM._$AU}u(e){let{el:{content:t},parts:i}=this._$AD,s=(e?.creationScope??P).importNode(t,!0);M.currentNode=s;let r=M.nextNode(),n=0,a=0,c=i[0];for(;c!==void 0;){if(n===c.index){let d;c.type===2?d=new te(r,r.nextSibling,this,e):c.type===1?d=new c.ctor(r,c.name,c.strings,this,e):c.type===6&&(d=new Ae(r,this,e)),this._$AV.push(d),c=i[++a]}n!==c?.index&&(r=M.nextNode(),n++)}return M.currentNode=P,s}p(e){let t=0;for(let i of this._$AV)i!==void 0&&(i.strings!==void 0?(i._$AI(e,i,t),t+=i.strings.length-2):i._$AI(e[t])),t++}},te=class o{get _$AU(){return this._$AM?._$AU??this._$Cv}constructor(e,t,i,s){this.type=2,this._$AH=l,this._$AN=void 0,this._$AA=e,this._$AB=t,this._$AM=i,this.options=s,this._$Cv=s?.isConnected??!0}get parentNode(){let e=this._$AA.parentNode,t=this._$AM;return t!==void 0&&e?.nodeType===11&&(e=t.parentNode),e}get startNode(){return this._$AA}get endNode(){return this._$AB}_$AI(e,t=this){e=T(this,e,t),Z(e)?e===l||e==null||e===""?(this._$AH!==l&&this._$AR(),this._$AH=l):e!==this._$AH&&e!==D&&this._(e):e._$litType$!==void 0?this.$(e):e.nodeType!==void 0?this.T(e):ht(e)?this.k(e):this._(e)}O(e){return this._$AA.parentNode.insertBefore(e,this._$AB)}T(e){this._$AH!==e&&(this._$AR(),this._$AH=this.O(e))}_(e){this._$AH!==l&&Z(this._$AH)?this._$AA.nextSibling.data=e:this.T(P.createTextNode(e)),this._$AH=e}$(e){let{values:t,_$litType$:i}=e,s=typeof i=="number"?this._$AC(e):(i.el===void 0&&(i.el=ee.createElement(Je(i.h,i.h[0]),this.options)),i);if(this._$AH?._$AD===s)this._$AH.p(t);else{let r=new xe(s,this),n=r.u(this.options);r.p(t),this.T(n),this._$AH=r}}_$AC(e){let t=Ye.get(e.strings);return t===void 0&&Ye.set(e.strings,t=new ee(e)),t}k(e){ke(this._$AH)||(this._$AH=[],this._$AR());let t=this._$AH,i,s=0;for(let r of e)s===t.length?t.push(i=new o(this.O(Q()),this.O(Q()),this,this.options)):i=t[s],i._$AI(r),s++;s<t.length&&(this._$AR(i&&i._$AB.nextSibling,s),t.length=s)}_$AR(e=this._$AA.nextSibling,t){for(this._$AP?.(!1,!0,t);e!==this._$AB;){let i=Ue(e).nextSibling;Ue(e).remove(),e=i}}setConnected(e){this._$AM===void 0&&(this._$Cv=e,this._$AP?.(e))}},U=class{get tagName(){return this.element.tagName}get _$AU(){return this._$AM._$AU}constructor(e,t,i,s,r){this.type=1,this._$AH=l,this._$AN=void 0,this.element=e,this.name=t,this._$AM=s,this.options=r,i.length>2||i[0]!==""||i[1]!==""?(this._$AH=Array(i.length-1).fill(new String),this.strings=i):this._$AH=l}_$AI(e,t=this,i,s){let r=this.strings,n=!1;if(r===void 0)e=T(this,e,t,0),n=!Z(e)||e!==this._$AH&&e!==D,n&&(this._$AH=e);else{let a=e,c,d;for(e=r[0],c=0;c<r.length-1;c++)d=T(this,a[i+c],t,c),d===D&&(d=this._$AH[c]),n||=!Z(d)||d!==this._$AH[c],d===l?e=l:e!==l&&(e+=(d??"")+r[c+1]),this._$AH[c]=d}n&&!s&&this.j(e)}j(e){e===l?this.element.removeAttribute(this.name):this.element.setAttribute(this.name,e??"")}},we=class extends U{constructor(){super(...arguments),this.type=3}j(e){this.element[this.name]=e===l?void 0:e}},Se=class extends U{constructor(){super(...arguments),this.type=4}j(e){this.element.toggleAttribute(this.name,!!e&&e!==l)}},Ee=class extends U{constructor(e,t,i,s,r){super(e,t,i,s,r),this.type=5}_$AI(e,t=this){if((e=T(this,e,t,0)??l)===D)return;let i=this._$AH,s=e===l&&i!==l||e.capture!==i.capture||e.once!==i.once||e.passive!==i.passive,r=e!==l&&(i===l||s);s&&this.element.removeEventListener(this.name,this,i),r&&this.element.addEventListener(this.name,this,e),this._$AH=e}handleEvent(e){typeof this._$AH=="function"?this._$AH.call(this.options?.host??this.element,e):this._$AH.handleEvent(e)}},Ae=class{constructor(e,t,i){this.element=e,this.type=6,this._$AN=void 0,this._$AM=t,this.options=i}get _$AU(){return this._$AM._$AU}_$AI(e){T(this,e)}};var pt=Ce.litHtmlPolyfillSupport;pt?.(ee,te),(Ce.litHtmlVersions??=[]).push("3.3.2");var Qe=(o,e,t)=>{let i=t?.renderBefore??e,s=i._$litPart$;if(s===void 0){let r=t?.renderBefore??null;i._$litPart$=s=new te(e.insertBefore(Q(),r),r,void 0,t??{})}return s._$AI(o),s};var Ne=globalThis,x=class extends _{constructor(){super(...arguments),this.renderOptions={host:this},this._$Do=void 0}createRenderRoot(){let e=super.createRenderRoot();return this.renderOptions.renderBefore??=e.firstChild,e}update(e){let t=this.render();this.hasUpdated||(this.renderOptions.isConnected=this.isConnected),super.update(e),this._$Do=Qe(t,this.renderRoot,this.renderOptions)}connectedCallback(){super.connectedCallback(),this._$Do?.setConnected(!0)}disconnectedCallback(){super.disconnectedCallback(),this._$Do?.setConnected(!1)}render(){return D}};x._$litElement$=!0,x.finalized=!0,Ne.litElementHydrateSupport?.({LitElement:x});var vt=Ne.litElementPolyfillSupport;vt?.({LitElement:x});(Ne.litElementVersions??=[]).push("4.2.2");var Ie=class o extends x{static LAYOUT_BUILD_MARKER="v1.0.6";_hass;config;optimisticPowerState;resolvedEntities={};resolvedLayerSourceEntities=[];resolvedDeviceId;resolvingDeviceId;resolvedForHass;lastRelevantStateSignature="";activeLayerSourceChooser;static properties={hass:{attribute:!1,noAccessor:!0},config:{attribute:!1}};get hass(){return this._hass}set hass(e){let t=this._hass;this._hass=e;let i=this.buildRelevantStateSignature(e),s=i!==this.lastRelevantStateSignature;this.lastRelevantStateSignature=i,(t!==e||s)&&this.requestUpdate("hass",t)}setConfig(e){let t={...e};t.type||="custom:novastar-h-series-card",this.config=t}getCardSize(){return 3}static async getConfigElement(){return document.createElement("novastar-h-series-card-editor")}static getStubConfig(){return{type:"custom:novastar-h-series-card",header:"Novastar H Series"}}updated(){this.ensureResolvedEntities(),this.syncOptimisticPowerState()}render(){if(!this.config)return v`<ha-card><div class="content">Invalid card configuration.</div></ha-card>`;if(!this.hass)return v`<ha-card><div class="content">Home Assistant context is unavailable.</div></ha-card>`;let e=this.getEntityId("controller_entity");if(!e){let ce=this.config.device_id&&this.resolvingDeviceId===this.config.device_id?"Resolving entities for selected device...":"Set a device_id or controller_entity in card configuration.";return v`<ha-card><div class="content">${ce}</div></ha-card>`}let t=this.hass.states[e];if(!t)return v`<ha-card><div class="content">Entity not found: ${e}</div></ha-card>`;let i=this.getEntityId("power_entity")??"switch.novastar_h2_power_screen_output",s=this.getEntityId("preset_entity"),r=this.getEntityId("screens_entity"),n=this.getEntityId("layers_entity"),a=this.getEntityId("status_entity"),c=this.getEntityId("brightness_entity"),d=this.getEntityId("temperature_entity"),p=this.hass.states[i],y=(this.optimisticPowerState??p?.state)==="on",f=!!p&&!y,b=a?this.hass.states[a]:void 0,w=s?this.hass.states[s]:void 0,se=r?this.hass.states[r]:void 0,g=n?this.hass.states[n]:void 0,m=c?this.hass.states[c]:void 0,S=d?this.hass.states[d]:void 0,C=m?Number.parseFloat(m.state):Number.NaN,V=m?this.readNumberAttribute(m,"min",0):0,F=m?this.readNumberAttribute(m,"max",100):100,j=m?this.readNumberAttribute(m,"step",1):1,re=!!m&&Number.isFinite(C),W=m?this.readStringAttribute(m,"unit_of_measurement")??"":"",k=this.readStringListAttribute(w,"options"),E=w?this.resolveSelectedOption(w,k):"",q=this.readLayoutPayload(se,g),Y=b?`${t.state} (${b.state})`:t.state,ne=S?this.readStringAttribute(S,"unit_of_measurement")??"":"",L=this.getDisplayMode(),R=L==="compact",O=L==="detailed",H=this.config.show_header_in_compact===!0,ge=!R||H,oe=R&&!H,ae=this.config.header??"Novastar H Series",h=["content",`content--${L}`,oe?"content--bare":""].filter(Boolean).join(" ");return v`
+      <ha-card class="nova-card nova-card--${L} ${y?"is-on":"is-off"}">
+        ${ge?v`
               <div class="header-row">
-                <div class="header">${this.config.title??"Novastar H Series"}</div>
-                <div class="header-controls">
-                  ${m&&it?g`
-                        <div class="header-brightness" title="Brightness">
-                          <input
-                            class="brightness-slider header-brightness-slider"
-                            type="range"
-                            min=${Z}
-                            max=${tt}
-                            step=${et}
-                            .value=${String(D)}
-                            .disabled=${v}
-                            ?disabled=${v}
-                            @change=${this.handleBrightnessChanged}
-                          />
+                <div class="header-lead">
+                  ${!O&&p?v`<span
+                        class="status-dot ${y?"status-dot--on":"status-dot--off"}"
+                        title=${Y}
+                      ></span>`:l}
+                  <div class="header">${ae}</div>
+                </div>
+                ${p?this.renderPowerButton(y):l}
+              </div>
+            `:l}
+        <div class=${h}>
+          ${R?l:O?v`
+                  <div class="row">
+                    <span class="label">Status</span>
+                    <span class="value status-value status-value--${y?"on":"off"}">${Y}</span>
+                  </div>
+                  ${S?v`
+                        <div class="row">
+                          <span class="label">Temperature</span>
+                          <span class="value">${S.state}${ne}</span>
                         </div>
                       `:l}
-                  ${p?g`
-                        <label class="power-toggle" title="Toggle screen output">
-                          <input
-                            type="checkbox"
-                            .checked=${f}
-                            @change=${this.handlePowerToggle}
-                          />
-                          <span class="power-slider"></span>
-                        </label>
+                  ${m?v`
+                        <div class="row input-row">
+                          <span class="label">Brightness</span>
+                          ${re?this.renderBrightnessControl(V,F,j,C,f,W):v`<span class="value">${m.state}${W}</span>`}
+                        </div>
                       `:l}
-                </div>
-              </div>
-            `}
-        <div class=${z?"content content--compact":"content"}>
-          ${S?l:g`
-                <div class="row">
-                  <span class="label">Status</span>
-                  <span class="value">${E}</span>
-                </div>
-                ${P?g`<div class="row"><span class="label">Temperature</span><span class="value">${P.state}</span></div>`:l}
-                ${I?B.length>0?(()=>{let R=this.resolveSelectedOption(I,B);return g`
-                          <div class="row input-row">
-                            <span class="label">Preset</span>
-                            <select
-                              class="input-select"
-                              .disabled=${v}
-                              ?disabled=${v}
-                              @change=${this.handlePresetSelectionChanged}
-                            >
-                              ${B.map(V=>g`
-                                <option
-                                  .value=${V}
-                                  ?selected=${this.optionEquals(V,R)}
-                                >${V}</option>
-                              `)}
-                            </select>
-                          </div>
-                        `})():g`<div class="row"><span class="label">Preset</span><span class="value">${I.state}</span></div>`:l}
-              `}
-          ${st?this.renderLayoutPreview(st,z):S?g`<div class="row"><span class="label">Layout</span><span class="value">Unavailable</span></div>`:l}
-          ${S?l:m?it?l:g`<div class="row"><span class="label">Brightness</span><span class="value">${m.state}</span></div>`:l}
+                  ${w?v`
+                        <div class="row input-row preset-row">
+                          <span class="label">Preset</span>
+                          ${k.length>0?this.renderPresetChips(k,E,f):v`<span class="value">${w.state}</span>`}
+                        </div>
+                      `:l}
+                `:v`
+                  ${re?v`<div class="standard-block">${this.renderBrightnessControl(V,F,j,C,f,W)}</div>`:l}
+                  ${w&&k.length>0?v`<div class="standard-block standard-block--chips">${this.renderPresetChips(k,E,f)}</div>`:l}
+                `}
+          ${q?this.renderLayoutPreview(q,oe):R?v`<div class="row"><span class="label">Layout</span><span class="value">Unavailable</span></div>`:l}
+          ${O?this.renderVersionFooter():l}
         </div>
       </ha-card>
-    `}getDisplayMode(){return this.config?.display_mode==="layout"?"layout":"full"}static styles=at`
+    `}getDisplayMode(){let e=this.config?.display_mode;return e==="detailed"||e==="compact"?e:"standard"}renderPowerButton(e){return v`
+      <button
+        type="button"
+        class="power-button ${e?"power-button--on":"power-button--off"}"
+        role="switch"
+        aria-checked=${e?"true":"false"}
+        aria-label="Toggle screen output"
+        title="Toggle screen output"
+        @click=${this.handlePowerToggle}
+      >
+        <svg class="power-button-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <path
+            d="M12 3a1 1 0 0 1 1 1v8a1 1 0 0 1-2 0V4a1 1 0 0 1 1-1zm5.66 2.93a1 1 0 0 1 1.41 0 9 9 0 1 1-12.73 0 1 1 0 1 1 1.41 1.42 7 7 0 1 0 9.9 0 1 1 0 0 1 0-1.42z"
+          ></path>
+        </svg>
+      </button>
+    `}renderBrightnessControl(e,t,i,s,r,n){let a=t-e||1,c=Math.max(0,Math.min(100,Math.round((s-e)/a*100))),d=n?`${Math.round(s)}${n}`:`${c}%`;return v`
+      <div class="brightness-control" style=${`--nova-brightness-fill:${c}%`}>
+        <svg class="brightness-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <path
+            d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zm0-6a1 1 0 0 1 1 1v1.5a1 1 0 1 1-2 0V3a1 1 0 0 1 1-1zm0 16.5a1 1 0 0 1 1 1V21a1 1 0 1 1-2 0v-1.5a1 1 0 0 1 1-1zM4.93 4.93a1 1 0 0 1 1.41 0l1.06 1.06A1 1 0 0 1 5.99 7.4L4.93 6.34a1 1 0 0 1 0-1.41zm11.67 11.67a1 1 0 0 1 1.41 0l1.06 1.06a1 1 0 0 1-1.41 1.41l-1.06-1.06a1 1 0 0 1 0-1.41zM2 12a1 1 0 0 1 1-1h1.5a1 1 0 1 1 0 2H3a1 1 0 0 1-1-1zm17.5 0a1 1 0 0 1 1-1H22a1 1 0 1 1 0 2h-1.5a1 1 0 0 1-1-1zM4.93 19.07a1 1 0 0 1 0-1.41l1.06-1.06a1 1 0 1 1 1.41 1.41l-1.06 1.06a1 1 0 0 1-1.41 0zM16.6 7.4a1 1 0 0 1 0-1.41l1.06-1.06a1 1 0 1 1 1.41 1.41L18.01 7.4a1 1 0 0 1-1.41 0z"
+          ></path>
+        </svg>
+        <input
+          class="brightness-slider"
+          type="range"
+          min=${e}
+          max=${t}
+          step=${i}
+          .value=${String(s)}
+          .disabled=${r}
+          ?disabled=${r}
+          aria-label="Brightness"
+          @change=${this.handleBrightnessChanged}
+        />
+        <span class="brightness-value">${d}</span>
+      </div>
+    `}renderPresetChips(e,t,i){return v`
+      <div class="preset-chips" role="group" aria-label="Preset">
+        ${e.map(s=>{let r=this.optionEquals(s,t);return v`
+            <button
+              type="button"
+              class="preset-chip ${r?"preset-chip--active":""}"
+              ?disabled=${i}
+              aria-pressed=${r?"true":"false"}
+              @click=${()=>this.handlePresetButtonClick(s)}
+            >${s}</button>
+          `})}
+      </div>
+    `}renderVersionFooter(){return v`<div class="version-footer">${o.LAYOUT_BUILD_MARKER}</div>`}static styles=ue`
+    :host {
+      --nova-accent: var(--primary-color, #2196f3);
+      --nova-on-accent: var(--text-primary-color, #ffffff);
+      --nova-text: var(--primary-text-color, #1c1c1c);
+      --nova-muted: var(--secondary-text-color, #6f6f6f);
+      --nova-divider: var(--divider-color, rgba(120, 120, 120, 0.22));
+      --nova-surface: var(--card-background-color, var(--ha-card-background, #ffffff));
+      --nova-surface-2: color-mix(in srgb, var(--nova-surface) 84%, var(--nova-text) 16%);
+      --nova-success: var(--success-color, #43a047);
+      --nova-radius: 16px;
+      --nova-radius-sm: 12px;
+      --nova-pill: 999px;
+      --nova-gap: 14px;
+      --nova-touch: 44px;
+      display: block;
+    }
+
+    ha-card {
+      border-radius: var(--nova-radius);
+      overflow: hidden;
+    }
+
     .header-row {
       align-items: center;
       display: flex;
+      gap: var(--nova-gap);
       justify-content: space-between;
-      gap: 12px;
-      padding: 16px 16px 0;
+      padding: 18px 18px 4px;
+    }
+
+    .header-lead {
+      align-items: center;
+      display: inline-flex;
+      gap: 10px;
+      min-width: 0;
     }
 
     .header {
-      font-size: 1rem;
+      font-size: 1.15rem;
       font-weight: 600;
+      letter-spacing: 0.01em;
+      line-height: 1.2;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .status-dot {
+      border-radius: 50%;
+      flex: none;
+      height: 10px;
+      transition: background-color 0.25s ease, box-shadow 0.25s ease;
+      width: 10px;
+    }
+
+    .status-dot--on {
+      background: var(--nova-success);
+      box-shadow: 0 0 8px color-mix(in srgb, var(--nova-success) 70%, transparent);
+    }
+
+    .status-dot--off {
+      background: color-mix(in srgb, var(--nova-muted) 55%, transparent);
+    }
+
+    .power-button {
+      align-items: center;
+      background: var(--nova-surface-2);
+      border: 1px solid var(--nova-divider);
+      border-radius: 50%;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
+      box-sizing: border-box;
+      color: color-mix(in srgb, var(--nova-text) 60%, transparent);
+      cursor: pointer;
+      display: inline-flex;
+      flex: none;
+      height: var(--nova-touch);
+      justify-content: center;
+      padding: 0;
+      transition: background 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.08s ease;
+      width: var(--nova-touch);
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .power-button:hover {
+      border-color: color-mix(in srgb, var(--nova-accent) 45%, var(--nova-divider));
+    }
+
+    .power-button:active {
+      transform: scale(0.94);
+    }
+
+    .power-button:focus-visible {
+      outline: 2px solid var(--nova-accent);
+      outline-offset: 2px;
+    }
+
+    .power-button-icon {
+      fill: currentColor;
+      height: 22px;
+      width: 22px;
+    }
+
+    .power-button--on {
+      background:
+        radial-gradient(circle at 30% 26%,
+          color-mix(in srgb, var(--nova-accent) 76%, #ffffff) 8%,
+          color-mix(in srgb, var(--nova-accent) 90%, #000000) 100%);
+      border-color: color-mix(in srgb, var(--nova-accent) 55%, #ffffff);
+      box-shadow:
+        0 0 0 1px color-mix(in srgb, var(--nova-accent) 35%, transparent),
+        0 0 16px color-mix(in srgb, var(--nova-accent) 38%, transparent),
+        0 2px 8px rgba(0, 0, 0, 0.28),
+        inset 0 1px 0 rgba(255, 255, 255, 0.28);
+      color: var(--nova-on-accent);
     }
 
     .content {
-      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: var(--nova-gap);
+      padding: 16px 18px 18px;
     }
 
-    .content--compact {
-      padding-top: 16px;
+    .content--standard {
+      gap: 16px;
+    }
+
+    .content--bare {
+      gap: 0;
+      padding: 0;
     }
 
     .row {
       align-items: center;
       display: flex;
+      gap: 12px;
       justify-content: space-between;
-      margin-bottom: 8px;
-    }
-
-    .row:last-child {
-      margin-bottom: 0;
+      min-height: 28px;
     }
 
     .label {
-      color: var(--secondary-text-color);
+      color: var(--nova-muted);
       font-size: 0.95rem;
+      font-weight: 500;
     }
 
     .value {
-      font-weight: 500;
+      color: var(--nova-text);
+      font-weight: 600;
+      text-align: right;
       text-transform: capitalize;
     }
 
-    .brightness-row {
-      margin-bottom: 8px;
-    }
-
-    .header-controls {
+    .status-value {
       align-items: center;
+      border-radius: var(--nova-pill);
       display: inline-flex;
-      gap: 10px;
-      min-height: 24px;
+      font-size: 0.85rem;
+      gap: 6px;
+      padding: 4px 12px;
+      text-transform: none;
     }
 
-    .header-brightness {
-      align-items: center;
-      display: inline-flex;
-      min-width: 120px;
+    .status-value--on {
+      background: color-mix(in srgb, var(--nova-success) 16%, transparent);
+      color: color-mix(in srgb, var(--nova-success) 78%, var(--nova-text));
     }
 
-    .header-brightness-slider {
-      width: 120px;
-    }
-
-    .brightness-header {
-      align-items: center;
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 6px;
-    }
-
-    .brightness-slider {
-      box-sizing: border-box;
-      width: 100%;
-    }
-
-    .brightness-slider:disabled {
-      opacity: 0.45;
-      pointer-events: none;
-    }
-
-    .power-toggle {
-      display: inline-flex;
-      height: 22px;
-      position: relative;
-      width: 40px;
-    }
-
-    .power-toggle input {
-      height: 0;
-      opacity: 0;
-      width: 0;
-    }
-
-    .power-slider {
-      background-color: var(--disabled-color);
-      border-radius: 999px;
-      cursor: pointer;
-      inset: 0;
-      position: absolute;
-      transition: 0.2s;
-    }
-
-    .power-slider::before {
-      background-color: var(--card-background-color);
-      border-radius: 50%;
-      content: "";
-      height: 16px;
-      left: 3px;
-      position: absolute;
-      top: 3px;
-      transition: 0.2s;
-      width: 16px;
-    }
-
-    .power-toggle input:checked + .power-slider {
-      background-color: var(--success-color, var(--primary-color));
-    }
-
-    .power-toggle input:checked + .power-slider::before {
-      transform: translateX(18px);
+    .status-value--off {
+      background: color-mix(in srgb, var(--nova-muted) 16%, transparent);
+      color: var(--nova-muted);
     }
 
     .input-row {
       align-items: center;
     }
 
-    .input-select {
-      background: var(--card-background-color);
-      border: 1px solid var(--divider-color);
-      border-radius: 6px;
-      color: var(--primary-text-color);
-      font: inherit;
-      max-width: 60%;
-      min-width: 140px;
-      padding: 4px 8px;
+    .preset-row {
+      align-items: flex-start;
+      flex-wrap: wrap;
     }
 
-    .input-select:disabled {
+    .standard-block {
+      display: flex;
+    }
+
+    .brightness-control {
+      align-items: center;
+      background: var(--nova-surface-2);
+      border: 1px solid var(--nova-divider);
+      border-radius: var(--nova-pill);
+      box-sizing: border-box;
+      display: flex;
+      flex: 1 1 auto;
+      gap: 12px;
+      min-height: var(--nova-touch);
+      padding: 0 16px;
+      width: 100%;
+    }
+
+    .brightness-icon {
+      color: var(--nova-muted);
+      fill: currentColor;
+      flex: none;
+      height: 20px;
+      width: 20px;
+    }
+
+    .brightness-value {
+      color: var(--nova-text);
+      flex: none;
+      font-size: 0.9rem;
+      font-weight: 600;
+      min-width: 42px;
+      text-align: right;
+    }
+
+    .brightness-slider {
+      -webkit-appearance: none;
+      appearance: none;
+      background: transparent;
+      box-sizing: border-box;
+      flex: 1 1 auto;
+      height: var(--nova-touch);
+      margin: 0;
+      width: 100%;
+    }
+
+    .brightness-slider::-webkit-slider-runnable-track {
+      background: linear-gradient(
+        to right,
+        var(--nova-accent) 0%,
+        var(--nova-accent) var(--nova-brightness-fill, 50%),
+        color-mix(in srgb, var(--nova-text) 18%, transparent) var(--nova-brightness-fill, 50%),
+        color-mix(in srgb, var(--nova-text) 18%, transparent) 100%
+      );
+      border-radius: var(--nova-pill);
+      height: 6px;
+    }
+
+    .brightness-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      background: #ffffff;
+      border: 1px solid color-mix(in srgb, var(--nova-text) 20%, transparent);
+      border-radius: 50%;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+      height: 22px;
+      margin-top: -8px;
+      width: 22px;
+    }
+
+    .brightness-slider::-moz-range-track {
+      background: color-mix(in srgb, var(--nova-text) 18%, transparent);
+      border-radius: var(--nova-pill);
+      height: 6px;
+    }
+
+    .brightness-slider::-moz-range-progress {
+      background: var(--nova-accent);
+      border-radius: var(--nova-pill);
+      height: 6px;
+    }
+
+    .brightness-slider::-moz-range-thumb {
+      background: #ffffff;
+      border: 1px solid color-mix(in srgb, var(--nova-text) 20%, transparent);
+      border-radius: 50%;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+      height: 22px;
+      width: 22px;
+    }
+
+    .brightness-slider:disabled {
+      opacity: 0.4;
+      pointer-events: none;
+    }
+
+    .preset-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .preset-chip {
+      background: var(--nova-surface-2);
+      border: 1px solid var(--nova-divider);
+      border-radius: var(--nova-pill);
+      color: var(--nova-text);
+      cursor: pointer;
+      font: inherit;
+      font-size: 0.92rem;
+      font-weight: 600;
+      min-height: 38px;
+      padding: 8px 16px;
+      transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease, transform 0.08s ease;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .preset-chip:hover {
+      border-color: color-mix(in srgb, var(--nova-accent) 50%, var(--nova-divider));
+    }
+
+    .preset-chip:active {
+      transform: scale(0.96);
+    }
+
+    .preset-chip:focus-visible {
+      outline: 2px solid var(--nova-accent);
+      outline-offset: 2px;
+    }
+
+    .preset-chip--active {
+      background: var(--nova-accent);
+      border-color: color-mix(in srgb, var(--nova-accent) 60%, #ffffff);
+      box-shadow: 0 2px 10px color-mix(in srgb, var(--nova-accent) 35%, transparent);
+      color: var(--nova-on-accent);
+    }
+
+    .preset-chip:disabled {
       opacity: 0.45;
       pointer-events: none;
     }
 
     .layout-preview {
-      margin-top: 12px;
-      border-top: 1px solid var(--divider-color);
-      padding-top: 12px;
+      border-radius: var(--nova-radius-sm);
       position: relative;
     }
 
-    .layout-preview--compact {
-      margin-top: 0;
-      border-top: none;
-      padding-top: 0;
-    }
-
-    .layout-meta {
-      color: #9e9e9e;
-      font-size: 12px;
-      margin-bottom: 6px;
-    }
-
     .layout-title {
-      color: var(--secondary-text-color);
+      color: var(--nova-muted);
       font-size: 0.9rem;
       margin-bottom: 8px;
     }
 
     .layout-canvas {
-      width: 100%;
+      background: #08090b;
+      border: 1px solid var(--nova-divider);
+      border-radius: var(--nova-radius-sm);
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02), 0 6px 18px rgba(0, 0, 0, 0.18);
       display: block;
-      background: var(--card-background-color);
-      border: 1px solid var(--divider-color);
-      border-radius: 6px;
+      width: 100%;
+    }
+
+    .layout-preview--compact .layout-canvas {
+      border-radius: 0;
     }
 
     .layout-screen {
-      fill: #000000;
-      stroke: #4a4a4a;
-      stroke-width: 1;
+      fill: #06070a;
+      stroke: color-mix(in srgb, var(--nova-text) 22%, #3a3a3a);
     }
 
     .layout-layer {
-      fill: #d9d9d9;
+      fill: color-mix(in srgb, var(--nova-accent) 14%, #c9d2dc);
       fill-opacity: 1;
-      stroke: #808080;
-      stroke-width: 1;
+      stroke: color-mix(in srgb, var(--nova-accent) 55%, #8893a0);
     }
 
     .layout-layer-hitbox {
       cursor: pointer;
     }
 
+    .layout-label {
+      fill: var(--nova-text);
+      font-family: inherit;
+      font-size: 9px;
+      pointer-events: none;
+    }
+
+    .layout-empty {
+      fill: color-mix(in srgb, #ffffff 65%, transparent);
+      font-family: inherit;
+      font-size: 14px;
+    }
+
+    .version-footer {
+      color: var(--nova-muted);
+      font-size: 0.72rem;
+      letter-spacing: 0.02em;
+      opacity: 0.7;
+      text-align: right;
+    }
+
     .layer-source-modal {
       align-items: center;
-      background: rgba(0, 0, 0, 0.45);
-      border-radius: 6px;
+      backdrop-filter: blur(2px);
+      background: rgba(0, 0, 0, 0.55);
+      border-radius: var(--nova-radius-sm);
       display: flex;
-      inset: 12px 0 0;
+      inset: 0;
       justify-content: center;
-      padding: 12px;
+      padding: 16px;
       position: absolute;
       z-index: 2;
     }
 
     .layer-source-modal-content {
-      background: var(--card-background-color);
-      border: 1px solid var(--divider-color);
-      border-radius: 10px;
-      box-shadow: 0 8px 22px rgba(0, 0, 0, 0.35);
-      color: var(--primary-text-color);
-      max-width: min(420px, 96%);
-      padding: 12px;
+      background: var(--nova-surface);
+      border: 1px solid var(--nova-divider);
+      border-radius: var(--nova-radius);
+      box-shadow: 0 18px 48px rgba(0, 0, 0, 0.45);
+      color: var(--nova-text);
+      max-width: min(440px, 96%);
+      padding: 18px;
       width: 100%;
     }
 
     .layer-source-modal-title {
-      font-size: 0.95rem;
+      font-size: 1.05rem;
       font-weight: 600;
-      margin-bottom: 8px;
+      margin-bottom: 14px;
     }
 
     .layer-source-modal-options {
       display: grid;
-      gap: 8px;
-      max-height: 260px;
+      gap: 10px;
+      max-height: 300px;
       overflow: auto;
     }
 
     .layer-source-modal-option {
-      background: var(--card-background-color);
-      border: 1px solid var(--divider-color);
-      border-radius: 8px;
-      color: var(--primary-text-color);
+      align-items: center;
+      background: var(--nova-surface-2);
+      border: 1px solid var(--nova-divider);
+      border-radius: var(--nova-radius-sm);
+      color: var(--nova-text);
       cursor: pointer;
+      display: flex;
       font: inherit;
-      padding: 8px 10px;
+      font-size: 0.98rem;
+      font-weight: 500;
+      min-height: var(--nova-touch);
+      padding: 10px 16px;
       text-align: left;
+      transition: background 0.18s ease, border-color 0.18s ease;
       width: 100%;
     }
 
+    .layer-source-modal-option:hover {
+      border-color: color-mix(in srgb, var(--nova-accent) 45%, var(--nova-divider));
+    }
+
     .layer-source-modal-option.selected {
-      border-color: var(--primary-color);
-      box-shadow: inset 0 0 0 1px var(--primary-color);
+      background: color-mix(in srgb, var(--nova-accent) 14%, transparent);
+      border-color: var(--nova-accent);
+      box-shadow: inset 0 0 0 1px var(--nova-accent);
+    }
+
+    .layer-source-modal-option:disabled {
+      opacity: 0.5;
+      pointer-events: none;
     }
 
     .layer-source-modal-actions {
       display: flex;
       justify-content: flex-end;
-      margin-top: 10px;
+      margin-top: 16px;
     }
 
     .layer-source-modal-close {
       background: transparent;
-      border: 1px solid var(--divider-color);
-      border-radius: 6px;
-      color: var(--primary-text-color);
+      border: 1px solid var(--nova-divider);
+      border-radius: var(--nova-pill);
+      color: var(--nova-text);
       cursor: pointer;
       font: inherit;
-      padding: 6px 10px;
+      font-weight: 600;
+      min-height: 40px;
+      padding: 8px 20px;
     }
 
-    .layout-version {
-      bottom: 14px;
-      color: #9e9e9e;
-      font-size: 10px;
-      position: absolute;
-      right: 10px;
+    .layer-source-modal-close:hover {
+      border-color: var(--nova-accent);
     }
-
-    .layout-label {
-      fill: var(--primary-text-color);
-      font-size: 9px;
-      font-family: inherit;
-      pointer-events: none;
-    }
-
-    .layout-empty {
-      fill: #bdbdbd;
-      font-size: 14px;
-      font-family: inherit;
-      text-anchor: middle;
-      dominant-baseline: middle;
-    }
-  `;renderLayoutPreview(t,e=!1){let i=t.screenWidth,s=t.screenHeight,r=this.fitLayersToViewport(t.layers,i,s).sort((y,m)=>y.z-m.z),n="#000000",a="#4a4a4a",c="#d9d9d9",d="#808080",p="#ffffff",h=this.getLayerSourceRows(),f=this.getLayerSourceLabelMap(),v=this.getEntityId("power_entity")??"switch.novastar_h2_power_screen_output",b=this.hass?.states[v],I=this.optimisticPowerState??b?.state,Q=!!b&&I!=="on";return g`
-      <div class=${e?"layout-preview layout-preview--compact":"layout-preview"}>
+  `;renderLayoutPreview(e,t=!1){let i=e.screenWidth,s=e.screenHeight,r=this.fitLayersToViewport(e.layers,i,s).sort((g,m)=>g.z-m.z),n="#000000",a="#4a4a4a",c="#d9d9d9",d="#808080",p="#ffffff",u=this.getLayerSourceRows(),y=this.getLayerSourceLabelMap(),f=this.getEntityId("power_entity")??"switch.novastar_h2_power_screen_output",b=this.hass?.states[f],w=this.optimisticPowerState??b?.state,se=!!b&&w!=="on";return v`
+      <div class=${t?"layout-preview layout-preview--compact":"layout-preview"}>
         <svg
           class="layout-canvas"
           viewBox=${`0 0 ${i} ${s}`}
@@ -366,106 +589,104 @@ var nt=globalThis,ot=nt.ShadowRoot&&(nt.ShadyCSS===void 0||nt.ShadyCSS.nativeSha
             fill=${n}
             stroke=${a}
             stroke-width="1"
-            style=${`fill:${n};stroke:${a};stroke-width:1;`}
           ></rect>
-          ${r.length===0?J`<text class="layout-empty" x=${i/2} y=${s/2}>No layers detected</text>`:l}
-          ${r.map((y,m)=>{let P=this.resolveLayerSourceRow(h,y.id,m),D=this.resolveLayerSourceLabel(f,y.id,m)??y.source?.trim()??y.id,Z=y.x+y.width/2,tt=y.y+y.height/2,et=Math.min(y.width,y.height),it=Math.max(54,i*.017),B=Math.max(et*.14,it),st=Math.max(24,y.height*.38),E=Math.min(B,st),S=Math.max(18,E*.35),U=Math.max(32,y.width*.9),z=Math.max(1,Math.floor((U-S*2)/Math.max(1,E*.62))),R=D.length<=z?D:`${D.slice(0,Math.max(1,z-1))}\u2026`,V=R.length*E*.62,Lt=Math.min(U,V+S*2),lt=Math.max(28,E*1.35),Jt=Z-Lt/2,Qt=tt-lt/2,kt=Math.max(6,lt*.25),u=Math.max(51,Math.min(138,et*.27)),Nt=Math.max(10,u*.22),A=Math.max(y.x+4,y.x+y.width-u-Nt),$=Math.min(y.y+Nt,y.y+y.height-u-4),ht=A+u*.22,Zt=$+u*.34,ut=u*.18,te=u*.32,ee=[`${ht+ut},${$+u*.26}`,`${A+u*.68},${$+u*.16}`,`${A+u*.68},${$+u*.84}`,`${ht+ut},${$+u*.74}`].join(" "),M=A+u*.7,O=$+u*.5,It=y.audioOpen===!0,Pt=y.audioOpen===!1,F=It?"#66bb6a":Pt?"#858585":"#bdbdbd",rt=!!P&&!Q;return J`
+          ${r.length===0?ie`<text class="layout-empty" x=${i/2} y=${s/2} text-anchor="middle" dominant-baseline="middle">No layers detected</text>`:l}
+          ${r.map((g,m)=>{let S=this.resolveLayerSourceRow(u,g.id,m),C=this.resolveLayerSourceLabel(y,g.id,m)??g.source?.trim()??g.id,V=g.x+g.width/2,F=g.y+g.height/2,j=Math.min(g.width,g.height),re=Math.max(54,i*.017),W=Math.max(j*.14,re),k=Math.max(24,g.height*.38),E=Math.min(W,k),q=Math.max(18,E*.35),Y=Math.max(32,g.width*.9),ne=Math.max(1,Math.floor((Y-q*2)/Math.max(1,E*.62))),L=C.length<=ne?C:`${C.slice(0,Math.max(1,ne-1))}\u2026`,R=L.length*E*.62,O=Math.min(Y,R+q*2),H=Math.max(28,E*1.35),ge=V-O/2,oe=F-H/2,ae=Math.max(6,H*.25),h=Math.max(51,Math.min(138,j*.27)),ce=Math.max(10,h*.22),N=Math.max(g.x+4,g.x+g.width-h-ce),$=Math.min(g.y+ce,g.y+g.height-h-4),ye=N+h*.22,Ze=$+h*.34,fe=h*.18,et=h*.32,tt=[`${ye+fe},${$+h*.26}`,`${N+h*.68},${$+h*.16}`,`${N+h*.68},${$+h*.84}`,`${ye+fe},${$+h*.74}`].join(" "),z=N+h*.7,B=$+h*.5,Pe=g.audioOpen===!0,De=g.audioOpen===!1,K=Pe?"var(--success-color, #43a047)":De?"var(--secondary-text-color, #8a8a8a)":"color-mix(in srgb, var(--secondary-text-color, #8a8a8a) 55%, transparent)",de=!!S&&!se;return ie`
               <g>
                 <rect
                   class="layout-layer"
-                  x=${y.x}
-                  y=${y.y}
-                  width=${y.width}
-                  height=${y.height}
+                  x=${g.x}
+                  y=${g.y}
+                  width=${g.width}
+                  height=${g.height}
                   fill=${c}
                   stroke=${d}
                   stroke-width="3"
-                  style=${`fill:${c};stroke:${d};stroke-width:3;`}
                 ></rect>
                 <g>
                   <rect
-                    x=${A}
+                    x=${N}
                     y=${$}
-                    width=${u}
-                    height=${u}
-                    rx=${u*.22}
-                    ry=${u*.22}
+                    width=${h}
+                    height=${h}
+                    rx=${h*.22}
+                    ry=${h*.22}
                     fill="#111111"
                     fill-opacity="0.8"
                   ></rect>
                   <rect
-                    x=${ht}
-                    y=${Zt}
-                    width=${ut}
-                    height=${te}
-                    fill=${F}
+                    x=${ye}
+                    y=${Ze}
+                    width=${fe}
+                    height=${et}
+                    fill=${K}
                   ></rect>
-                  <polygon points=${ee} fill=${F}></polygon>
-                  ${It?J`
+                  <polygon points=${tt} fill=${K}></polygon>
+                  ${Pe?ie`
                       <path
-                        d=${`M ${M} ${O-u*.13} Q ${M+u*.12} ${O} ${M} ${O+u*.13}`}
+                        d=${`M ${z} ${B-h*.13} Q ${z+h*.12} ${B} ${z} ${B+h*.13}`}
                         fill="none"
-                        stroke=${F}
-                        stroke-width=${u*.06}
+                        stroke=${K}
+                        stroke-width=${h*.06}
                         stroke-linecap="round"
                       ></path>
                       <path
-                        d=${`M ${M+u*.1} ${O-u*.22} Q ${M+u*.28} ${O} ${M+u*.1} ${O+u*.22}`}
+                        d=${`M ${z+h*.1} ${B-h*.22} Q ${z+h*.28} ${B} ${z+h*.1} ${B+h*.22}`}
                         fill="none"
-                        stroke=${F}
-                        stroke-width=${u*.06}
+                        stroke=${K}
+                        stroke-width=${h*.06}
                         stroke-linecap="round"
                       ></path>
                     `:l}
-                  ${Pt?J`
+                  ${De?ie`
                       <line
-                        x1=${A+u*.7}
-                        y1=${$+u*.24}
-                        x2=${A+u*.92}
-                        y2=${$+u*.76}
-                        stroke=${F}
-                        stroke-width=${u*.08}
+                        x1=${N+h*.7}
+                        y1=${$+h*.24}
+                        x2=${N+h*.92}
+                        y2=${$+h*.76}
+                        stroke=${K}
+                        stroke-width=${h*.08}
                         stroke-linecap="round"
                       ></line>
                     `:l}
                 </g>
                 <rect
-                  class=${rt?"layout-layer-hitbox":""}
-                  x=${Jt}
-                  y=${Qt}
-                  width=${Lt}
-                  height=${lt}
-                  rx=${kt}
-                  ry=${kt}
+                  class=${de?"layout-layer-hitbox":""}
+                  x=${ge}
+                  y=${oe}
+                  width=${O}
+                  height=${H}
+                  rx=${ae}
+                  ry=${ae}
                   fill="#111111"
                   fill-opacity="0.82"
-                  @click=${rt?()=>this.openLayerSourceChooser(P):l}
+                  @click=${de?()=>this.openLayerSourceChooser(S):l}
                 ></rect>
                 <text
-                  class=${rt?"layout-layer-hitbox":""}
-                  x=${Z}
-                  y=${tt}
+                  class=${de?"layout-layer-hitbox":""}
+                  x=${V}
+                  y=${F}
                   font-weight="700"
                   style=${`fill:${p};font-size:${E}px;font-family:inherit;`}
                   text-anchor="middle"
                   dominant-baseline="middle"
-                  @click=${rt?()=>this.openLayerSourceChooser(P):l}
-                >${R}</text>
+                  @click=${de?()=>this.openLayerSourceChooser(S):l}
+                >${L}</text>
               </g>
             `})}
         </svg>
-        ${this.activeLayerSourceChooser?this.renderLayerSourceChooser(Q):l}
+        ${this.activeLayerSourceChooser?this.renderLayerSourceChooser(se):l}
       </div>
-    `}getLayerSourceLabelMap(){let t=new Map;for(let e of this.getLayerSourceRows()){let i=this.resolveSelectedOption(e.entity,e.options).trim();i&&t.set(e.layerNumber,i)}return t}resolveLayerSourceLabel(t,e,i){let s=[],r=Number.parseInt(e,10);Number.isFinite(r)&&(s.push(r),s.push(r+1)),s.push(i),s.push(i+1);for(let n of s){let a=t.get(n)?.trim();if(a)return a}}resolveLayerSourceRow(t,e,i){let s=[],r=Number.parseInt(e,10);Number.isFinite(r)&&(s.push(r),s.push(r+1)),s.push(i),s.push(i+1);for(let n of s){let a=t.find(c=>c.layerNumber===n);if(a)return a}return t[i]}renderLayerSourceChooser(t){let e=this.activeLayerSourceChooser;return e?g`
+    `}getLayerSourceLabelMap(){let e=new Map;for(let t of this.getLayerSourceRows()){let i=this.resolveSelectedOption(t.entity,t.options).trim();i&&e.set(t.layerNumber,i)}return e}resolveLayerSourceLabel(e,t,i){let s=[],r=Number.parseInt(t,10);Number.isFinite(r)&&(s.push(r),s.push(r+1)),s.push(i),s.push(i+1);for(let n of s){let a=e.get(n)?.trim();if(a)return a}}resolveLayerSourceRow(e,t,i){let s=[],r=Number.parseInt(t,10);Number.isFinite(r)&&(s.push(r),s.push(r+1)),s.push(i),s.push(i+1);for(let n of s){let a=e.find(c=>c.layerNumber===n);if(a)return a}return e[i]}renderLayerSourceChooser(e){let t=this.activeLayerSourceChooser;return t?v`
       <div class="layer-source-modal" @click=${this.handleLayerSourceModalBackdropClick}>
         <div class="layer-source-modal-content" @click=${i=>i.stopPropagation()}>
-          <div class="layer-source-modal-title">Layer ${e.layerNumber} Source</div>
+          <div class="layer-source-modal-title">Layer ${t.layerNumber} Source</div>
           <div class="layer-source-modal-options">
-            ${e.options.map(i=>g`
+            ${t.options.map(i=>v`
               <button
                 type="button"
-                class="layer-source-modal-option ${this.optionEquals(i,e.selectedOption)?"selected":""}"
-                ?disabled=${t}
+                class="layer-source-modal-option ${this.optionEquals(i,t.selectedOption)?"selected":""}"
+                ?disabled=${e}
                 @click=${()=>this.handleLayerSourceModalOptionClick(i)}
               >${i}</button>
             `)}
@@ -475,24 +696,25 @@ var nt=globalThis,ot=nt.ShadowRoot&&(nt.ShadyCSS===void 0||nt.ShadyCSS.nativeSha
           </div>
         </div>
       </div>
-    `:l}openLayerSourceChooser(t){t&&(this.activeLayerSourceChooser={entityId:t.entityId,layerNumber:t.layerNumber,options:t.options,selectedOption:this.resolveSelectedOption(t.entity,t.options)},this.requestUpdate())}closeLayerSourceChooser=()=>{this.activeLayerSourceChooser=void 0,this.requestUpdate()};handleLayerSourceModalBackdropClick=()=>{this.closeLayerSourceChooser()};async handleLayerSourceModalOptionClick(t){let e=this.activeLayerSourceChooser,i=t.trim();!e||!i||(await this.selectLayerSourceOption(e.entityId,i),this.closeLayerSourceChooser())}fitLayersToViewport(t,e,i){return t.length===0?[]:t.map(s=>{if(!Number.isFinite(s.x)||!Number.isFinite(s.y)||!Number.isFinite(s.width)||!Number.isFinite(s.height)||s.width<=0||s.height<=0)return;let r=Math.max(0,s.x),n=Math.max(0,s.y),a=Math.min(e,s.x+s.width),c=Math.min(i,s.y+s.height),d=a-r,p=c-n;if(!(d<=0||p<=0))return{...s,x:r,y:n,width:d,height:p}}).filter(s=>!!s)}readNumberAttribute(t,e,i){let s=t.attributes[e];if(typeof s=="number"&&Number.isFinite(s))return s;if(typeof s=="string"){let r=Number.parseFloat(s);if(Number.isFinite(r))return r}return i}readStringListAttribute(t,e){if(!t)return[];let i=t.attributes[e];return Array.isArray(i)?i.filter(s=>typeof s=="string"):[]}resolveSelectedOption(t,e){let i=t.state?.trim(),s=[i,this.readStringAttribute(t,"current_option"),this.readStringAttribute(t,"selected_option"),this.readStringAttribute(t,"source"),this.readStringAttribute(t,"current_source")].filter(r=>!!r);for(let r of s){let n=e.find(d=>d===r);if(n)return n;let a=r.toLowerCase(),c=e.find(d=>d.toLowerCase()===a);if(c)return c}return i??""}readStringAttribute(t,e){let i=t.attributes[e];return typeof i!="string"?void 0:i.trim()||void 0}optionEquals(t,e){if(t===e)return!0;let i=t.trim().toLowerCase(),s=e.trim().toLowerCase();return i===s}readLayoutPayload(t,e){if(!t||!e){this.logLayoutDebug("readLayoutPayload: missing screensEntity or layersEntity",{hasScreensEntity:!!t,hasLayersEntity:!!e});return}let i=this.readFirstScreen(t);if(!i){this.logLayoutDebug("readLayoutPayload: no screen found in screens entity");return}let s=this.readFiniteNumber(i.width??i.w),r=this.readFiniteNumber(i.height??i.h);if(!s||!r||s<=0||r<=0){this.logLayoutDebug("readLayoutPayload: invalid screen dimensions",{screenWidth:s,screenHeight:r,firstScreen:i});return}let n=this.readLayersCollection(e),a=n.map((c,d)=>this.normalizeLayoutLayer(c,d)).filter(c=>!!c);return this.logLayoutDebug("readLayoutPayload: parsed layers summary",{rawLayerCount:n.length,renderedLayerCount:a.length,screenWidth:s,screenHeight:r}),{screenWidth:s,screenHeight:r,layers:a}}readFirstScreen(t){let e=[t.state,t.attributes.screens,t.attributes.screen_list,t.attributes.screen,t.attributes.value,t.attributes.data,t.attributes.layout_json,t.attributes.layout,t.attributes.screen_layout];for(let i of e){let s=this.parseStructuredValue(i);if(Array.isArray(s)&&s.length>0){let a=this.asRecord(s[0]);if(a)return a}let r=this.asRecord(s);if(!r)continue;let n=r.screens;if(Array.isArray(n)&&n.length>0){let a=this.asRecord(n[0]);if(a)return a}if(this.readFiniteNumber(r.width??r.w)&&this.readFiniteNumber(r.height??r.h))return r}if(this.readFiniteNumber(t.attributes.width??t.attributes.w)&&this.readFiniteNumber(t.attributes.height??t.attributes.h))return t.attributes}readLayersCollection(t){let e=[t.state,t.attributes.layers,t.attributes.layer_list,t.attributes.value,t.attributes.data,t.attributes.layout_json,t.attributes.layout,t.attributes.screen_layout];for(let i of e){let s=this.parseStructuredValue(i);if(Array.isArray(s))return s;let r=this.asRecord(s);if(!r)continue;if(Array.isArray(r.layers))return r.layers;if(Array.isArray(r.layer_list))return r.layer_list;let n=this.asRecord(r.result);if(n&&Array.isArray(n.layers))return n.layers;let a=this.asRecord(r.data);if(a&&Array.isArray(a.layers))return a.layers;let c=Object.values(r).map(d=>this.asRecord(d)).filter(d=>!!d).filter(d=>!!this.asRecord(d.general)&&!!this.asRecord(d.window));if(c.length>0)return c;if(this.asRecord(r.general)&&this.asRecord(r.window))return[r]}return[]}parseStructuredValue(t){if(typeof t!="string")return t;try{return JSON.parse(t)}catch{return t}}asRecord(t){if(!(!t||typeof t!="object"||Array.isArray(t)))return t}readFiniteNumber(t){if(typeof t=="number"&&Number.isFinite(t))return t;if(typeof t=="string"){let e=Number.parseFloat(t);if(Number.isFinite(e))return e}}normalizeLayoutLayer(t,e){let i=this.asRecord(t);if(!i){this.logLayoutDebug("normalizeLayoutLayer: skipped - layer is not an object",{index:e,value:t});return}let s=this.asRecord(i.general),r=this.asRecord(i.window),n=this.asRecord(i.audioStatus);if(!s||!r){this.logLayoutDebug("normalizeLayoutLayer: skipped - missing general or window",{index:e,hasGeneral:!!s,hasWindow:!!r,layer:i});return}let a=this.readFiniteNumber(r.width),c=this.readFiniteNumber(r.height),d=this.readFiniteNumber(r.x)??0,p=this.readFiniteNumber(r.y)??0;if(!a||!c||a<=0||c<=0){this.logLayoutDebug("normalizeLayoutLayer: skipped - invalid dimensions",{index:e,width:a,height:c,windowData:r});return}let h=s.layerId;if(typeof h!="string"&&typeof h!="number"){this.logLayoutDebug("normalizeLayoutLayer: skipped - invalid layerId",{index:e,layerId:h,general:s});return}let f=this.readFiniteNumber(s.zorder);if(f===void 0){this.logLayoutDebug("normalizeLayoutLayer: skipped - invalid zorder",{index:e,zorder:s.zorder,general:s});return}let v=typeof s.name=="string"?s.name:void 0,b=n?.isOpen===void 0?void 0:!!n.isOpen;return this.logLayoutDebug("normalizeLayoutLayer: accepted",{index:e,layerId:h,x:d,y:p,width:a,height:c,zValue:f,source:v,audioOpen:b}),{id:String(h),x:d,y:p,width:a,height:c,z:f,source:v,audioOpen:b}}isLayoutDebugEnabled(){return this.config?.debug_layout===!0}logLayoutDebug(t,e){if(this.isLayoutDebugEnabled()){if(e===void 0){console.debug("[NovastarCard][layout]",t);return}console.debug("[NovastarCard][layout]",t,e)}}buildRelevantStateSignature(t){if(!t)return"";let e=new Set,i=["power_entity","preset_entity","screens_entity","layers_entity","controller_entity","status_entity","brightness_entity","temperature_entity"];for(let n of i){let a=this.config?.[n];a&&e.add(a);let c=this.resolvedEntities[n];c&&e.add(c)}e.add("switch.novastar_h2_power_screen_output");let s=/^select\..*_layer_\d+_source$/;for(let n of Object.keys(t.states))s.test(n)&&e.add(n);return Array.from(e).sort().map(n=>{let a=t.states[n];if(!a)return`${n}:missing`;let c=this.readStringListAttribute(a,"options").join("|"),d=this.readStringAttribute(a,"current_option")??"",p=this.readStringAttribute(a,"selected_option")??"",h=this.readStringAttribute(a,"source")??"",f=this.readStringAttribute(a,"current_source")??"";return`${n}:${a.state}:${c}:${d}:${p}:${h}:${f}`}).join("||")}reloadLayerSources(){this.resolvedLayerSourceEntities=[],this.resolvedDeviceId=void 0,this.resolvingDeviceId=void 0,this.requestUpdate()}async waitFor(t){await new Promise(e=>{window.setTimeout(()=>e(),t)})}getLayerSourceRows(){return this.hass?this.getLayerSourceEntityIds().map(t=>({entityId:t,entity:this.hass?.states[t]})).filter(t=>!!t.entity).map(t=>{let e=this.readStringListAttribute(t.entity,"options");return{...t,options:e,layerNumber:this.getLayerNumber(t.entityId)}}).filter(t=>t.options.length>0&&t.entity.state!=="unavailable"&&t.entity.state!=="unknown").sort((t,e)=>t.layerNumber-e.layerNumber):[]}getLayerSourceEntityIds(){let t=/^select\..*_layer_\d+_source$/,e=this.resolvedLayerSourceEntities,i=this.hass?Object.keys(this.hass.states).filter(s=>t.test(s)):[];return e.length===0?i:i.length===0?e:Array.from(new Set([...e,...i]))}getLayerNumber(t){let e=t.match(/_layer_(\d+)_source$/);if(!e)return Number.MAX_SAFE_INTEGER;let i=Number.parseInt(e[1],10);return Number.isFinite(i)?i:Number.MAX_SAFE_INTEGER}async handleBrightnessChanged(t){if(!this.hass)return;let e=this.getEntityId("power_entity")??"switch.novastar_h2_power_screen_output",i=this.hass.states[e];if(i&&i.state!=="on")return;let s=this.getEntityId("brightness_entity");if(!s)return;let r=t.target,n=Number.parseFloat(r.value);Number.isFinite(n)&&await this.hass.callService?.("number","set_value",{entity_id:s,value:n})}async handlePowerToggle(t){if(!this.hass)return;let e=this.getEntityId("power_entity")??"switch.novastar_h2_power_screen_output";if(!this.hass.states[e])return;let s=t.target.checked;this.optimisticPowerState=s?"on":"off",this.requestUpdate();let r=s?"turn_on":"turn_off";try{await this.hass.callService?.("switch",r,{entity_id:e})}catch{this.optimisticPowerState=void 0,this.requestUpdate()}}async handlePresetSelectionChanged(t){if(!this.hass)return;let e=this.getEntityId("preset_entity");if(!e)return;let s=t.target.value?.trim();s&&(await this.hass.callService?.("select","select_option",{entity_id:e,option:s}),this.reloadLayerSources(),await this.waitFor(350),this.reloadLayerSources())}async handleLayerSourceChanged(t){if(!this.hass)return;let e=t.target,i=e.dataset.entityId,s=e.value?.trim();!i||!s||await this.selectLayerSourceOption(i,s)}async selectLayerSourceOption(t,e){this.hass&&await this.hass.callService?.("select","select_option",{entity_id:t,option:e})}syncOptimisticPowerState(){if(!this.hass||!this.optimisticPowerState)return;let t=this.getEntityId("power_entity")??"switch.novastar_h2_power_screen_output",e=this.hass.states[t];if(!e){this.optimisticPowerState=void 0;return}e.state===this.optimisticPowerState&&(this.optimisticPowerState=void 0)}getEntityId(t){let e=this.config?.[t];if(e&&e.trim())return e;let i=this.resolvedEntities[t];if(i&&i.trim())return i}async ensureResolvedEntities(){if(!this.hass||!this.config)return;let t=this.config.device_id?.trim();if(!t){(this.resolvedDeviceId||Object.keys(this.resolvedEntities).length>0)&&(this.resolvedEntities={},this.resolvedLayerSourceEntities=[],this.resolvedDeviceId=void 0,this.resolvedForHass=void 0,this.requestUpdate());return}if(this.hass.callWS&&this.resolvingDeviceId!==t&&!(this.resolvedDeviceId===t&&this.resolvedForHass===this.hass)){this.resolvingDeviceId=t;try{let e=await this.hass.callWS({type:"config/entity_registry/list"});if(!Array.isArray(e))return;let i=e.filter(a=>{if(!a||typeof a!="object")return!1;let c=a;return c.device_id===t&&!c.disabled_by&&!c.hidden_by&&typeof c.entity_id=="string"}).map(a=>a.entity_id),s=/^select\..*_layer_\d+_source$/,r=i.filter(a=>s.test(a)).sort((a,c)=>this.getLayerNumber(a)-this.getLayerNumber(c)),n={power_entity:this.pickEntity(i,[/_power_screen_output$/,/_screen_output$/],["switch"]),preset_entity:this.pickEntity(i,[/_preset$/,/_layer_\d+_source$/],["select"]),screens_entity:this.pickEntity(i,[/_screens$/],["sensor"]),layers_entity:this.pickEntity(i,[/_layers$/],["sensor"]),controller_entity:this.pickEntity(i,[/_device_status$/],["sensor"]),status_entity:this.pickEntity(i,[/_signal_status$/],["sensor"]),brightness_entity:this.pickEntity(i,[/_brightness$/],["number","sensor"]),temperature_entity:this.pickEntity(i,[/_temperature_status$/,/_temp_status$/],["sensor"])};n.controller_entity||=this.pickEntity(i,[/^media_player\./],["media_player"]),n.controller_entity||=this.pickEntity(i,[/_status$/],["sensor"]),this.resolvedEntities=n,this.resolvedLayerSourceEntities=r,this.resolvedDeviceId=t,this.resolvedForHass=this.hass,this.requestUpdate()}catch{}finally{this.resolvingDeviceId===t&&(this.resolvingDeviceId=void 0)}}}pickEntity(t,e,i){for(let s of e){let r=t.find(n=>s.test(n));if(r)return r}for(let s of i){let r=`${s}.`,n=t.find(a=>a.startsWith(r));if(n)return n}}},Ct=class extends w{hass;config={type:"custom:novastar-h-series-card"};showOverrides=!1;localDeviceId;autoDetectedDeviceId;deviceNameById={};loadingDeviceNames=!1;attemptedAutoDeviceDefault=!1;static properties={hass:{attribute:!1},config:{attribute:!1},showOverrides:{attribute:!1}};setConfig(t){let e={...t};e.type||="custom:novastar-h-series-card",this.config=e;let i=e.device_id?.trim();i&&(this.localDeviceId=i,this.autoDetectedDeviceId=i),this.showOverrides=!!(e.power_entity||e.preset_entity||e.screens_entity||e.layers_entity||e.controller_entity||e.status_entity||e.brightness_entity||e.temperature_entity),this.attemptedAutoDeviceDefault=!1}updated(){this.ensureDefaultDeviceId(),this.ensureDeviceNames()}render(){if(!this.hass)return l;let t=!!customElements.get("ha-device-picker"),e=this.config.device_id?.trim()||this.localDeviceId||this.autoDetectedDeviceId||"",i=this.getSelectedDeviceLabel(e),s=(this.config.display_mode??"full")==="layout",r=this.config.show_title_in_layout===!0;return g`
+    `:l}openLayerSourceChooser(e){e&&(this.activeLayerSourceChooser={entityId:e.entityId,layerNumber:e.layerNumber,options:e.options,selectedOption:this.resolveSelectedOption(e.entity,e.options)},this.requestUpdate())}closeLayerSourceChooser=()=>{this.activeLayerSourceChooser=void 0,this.requestUpdate()};handleLayerSourceModalBackdropClick=()=>{this.closeLayerSourceChooser()};async handleLayerSourceModalOptionClick(e){let t=this.activeLayerSourceChooser,i=e.trim();!t||!i||(await this.selectLayerSourceOption(t.entityId,i),this.closeLayerSourceChooser())}fitLayersToViewport(e,t,i){return e.length===0?[]:e.map(s=>{if(!Number.isFinite(s.x)||!Number.isFinite(s.y)||!Number.isFinite(s.width)||!Number.isFinite(s.height)||s.width<=0||s.height<=0)return;let r=Math.max(0,s.x),n=Math.max(0,s.y),a=Math.min(t,s.x+s.width),c=Math.min(i,s.y+s.height),d=a-r,p=c-n;if(!(d<=0||p<=0))return{...s,x:r,y:n,width:d,height:p}}).filter(s=>!!s)}readNumberAttribute(e,t,i){let s=e.attributes[t];if(typeof s=="number"&&Number.isFinite(s))return s;if(typeof s=="string"){let r=Number.parseFloat(s);if(Number.isFinite(r))return r}return i}readStringListAttribute(e,t){if(!e)return[];let i=e.attributes[t];return Array.isArray(i)?i.filter(s=>typeof s=="string"):[]}resolveSelectedOption(e,t){let i=e.state?.trim(),s=[i,this.readStringAttribute(e,"current_option"),this.readStringAttribute(e,"selected_option"),this.readStringAttribute(e,"source"),this.readStringAttribute(e,"current_source")].filter(r=>!!r);for(let r of s){let n=t.find(d=>d===r);if(n)return n;let a=r.toLowerCase(),c=t.find(d=>d.toLowerCase()===a);if(c)return c}return i??""}readStringAttribute(e,t){let i=e.attributes[t];return typeof i!="string"?void 0:i.trim()||void 0}optionEquals(e,t){if(e===t)return!0;let i=e.trim().toLowerCase(),s=t.trim().toLowerCase();return i===s}readLayoutPayload(e,t){if(!e||!t){this.logLayoutDebug("readLayoutPayload: missing screensEntity or layersEntity",{hasScreensEntity:!!e,hasLayersEntity:!!t});return}let i=this.readFirstScreen(e);if(!i){this.logLayoutDebug("readLayoutPayload: no screen found in screens entity");return}let s=this.readFiniteNumber(i.width??i.w),r=this.readFiniteNumber(i.height??i.h);if(!s||!r||s<=0||r<=0){this.logLayoutDebug("readLayoutPayload: invalid screen dimensions",{screenWidth:s,screenHeight:r,firstScreen:i});return}let n=this.readLayersCollection(t),a=n.map((c,d)=>this.normalizeLayoutLayer(c,d)).filter(c=>!!c);return this.logLayoutDebug("readLayoutPayload: parsed layers summary",{rawLayerCount:n.length,renderedLayerCount:a.length,screenWidth:s,screenHeight:r}),{screenWidth:s,screenHeight:r,layers:a}}readFirstScreen(e){let t=[e.state,e.attributes.screens,e.attributes.screen_list,e.attributes.screen,e.attributes.value,e.attributes.data,e.attributes.layout_json,e.attributes.layout,e.attributes.screen_layout];for(let i of t){let s=this.parseStructuredValue(i);if(Array.isArray(s)&&s.length>0){let a=this.asRecord(s[0]);if(a)return a}let r=this.asRecord(s);if(!r)continue;let n=r.screens;if(Array.isArray(n)&&n.length>0){let a=this.asRecord(n[0]);if(a)return a}if(this.readFiniteNumber(r.width??r.w)&&this.readFiniteNumber(r.height??r.h))return r}if(this.readFiniteNumber(e.attributes.width??e.attributes.w)&&this.readFiniteNumber(e.attributes.height??e.attributes.h))return e.attributes}readLayersCollection(e){let t=[e.state,e.attributes.layers,e.attributes.layer_list,e.attributes.value,e.attributes.data,e.attributes.layout_json,e.attributes.layout,e.attributes.screen_layout];for(let i of t){let s=this.parseStructuredValue(i);if(Array.isArray(s))return s;let r=this.asRecord(s);if(!r)continue;if(Array.isArray(r.layers))return r.layers;if(Array.isArray(r.layer_list))return r.layer_list;let n=this.asRecord(r.result);if(n&&Array.isArray(n.layers))return n.layers;let a=this.asRecord(r.data);if(a&&Array.isArray(a.layers))return a.layers;let c=Object.values(r).map(d=>this.asRecord(d)).filter(d=>!!d).filter(d=>!!this.asRecord(d.general)&&!!this.asRecord(d.window));if(c.length>0)return c;if(this.asRecord(r.general)&&this.asRecord(r.window))return[r]}return[]}parseStructuredValue(e){if(typeof e!="string")return e;try{return JSON.parse(e)}catch{return e}}asRecord(e){if(!(!e||typeof e!="object"||Array.isArray(e)))return e}readFiniteNumber(e){if(typeof e=="number"&&Number.isFinite(e))return e;if(typeof e=="string"){let t=Number.parseFloat(e);if(Number.isFinite(t))return t}}normalizeLayoutLayer(e,t){let i=this.asRecord(e);if(!i){this.logLayoutDebug("normalizeLayoutLayer: skipped - layer is not an object",{index:t,value:e});return}let s=this.asRecord(i.general),r=this.asRecord(i.window),n=this.asRecord(i.audioStatus);if(!s||!r){this.logLayoutDebug("normalizeLayoutLayer: skipped - missing general or window",{index:t,hasGeneral:!!s,hasWindow:!!r,layer:i});return}let a=this.readFiniteNumber(r.width),c=this.readFiniteNumber(r.height),d=this.readFiniteNumber(r.x)??0,p=this.readFiniteNumber(r.y)??0;if(!a||!c||a<=0||c<=0){this.logLayoutDebug("normalizeLayoutLayer: skipped - invalid dimensions",{index:t,width:a,height:c,windowData:r});return}let u=s.layerId;if(typeof u!="string"&&typeof u!="number"){this.logLayoutDebug("normalizeLayoutLayer: skipped - invalid layerId",{index:t,layerId:u,general:s});return}let y=this.readFiniteNumber(s.zorder);if(y===void 0){this.logLayoutDebug("normalizeLayoutLayer: skipped - invalid zorder",{index:t,zorder:s.zorder,general:s});return}let f=typeof s.name=="string"?s.name:void 0,b=n?.isOpen===void 0?void 0:!!n.isOpen;return this.logLayoutDebug("normalizeLayoutLayer: accepted",{index:t,layerId:u,x:d,y:p,width:a,height:c,zValue:y,source:f,audioOpen:b}),{id:String(u),x:d,y:p,width:a,height:c,z:y,source:f,audioOpen:b}}isLayoutDebugEnabled(){return this.config?.debug_layout===!0}logLayoutDebug(e,t){if(this.isLayoutDebugEnabled()){if(t===void 0){console.debug("[NovastarCard][layout]",e);return}console.debug("[NovastarCard][layout]",e,t)}}buildRelevantStateSignature(e){if(!e)return"";let t=new Set,i=["power_entity","preset_entity","screens_entity","layers_entity","controller_entity","status_entity","brightness_entity","temperature_entity"];for(let n of i){let a=this.config?.[n];a&&t.add(a);let c=this.resolvedEntities[n];c&&t.add(c)}t.add("switch.novastar_h2_power_screen_output");let s=/^select\..*_layer_\d+_source$/;for(let n of Object.keys(e.states))s.test(n)&&t.add(n);return Array.from(t).sort().map(n=>{let a=e.states[n];if(!a)return`${n}:missing`;let c=this.readStringListAttribute(a,"options").join("|"),d=this.readStringAttribute(a,"current_option")??"",p=this.readStringAttribute(a,"selected_option")??"",u=this.readStringAttribute(a,"source")??"",y=this.readStringAttribute(a,"current_source")??"";return`${n}:${a.state}:${c}:${d}:${p}:${u}:${y}`}).join("||")}reloadLayerSources(){this.resolvedLayerSourceEntities=[],this.resolvedDeviceId=void 0,this.resolvingDeviceId=void 0,this.requestUpdate()}async waitFor(e){await new Promise(t=>{window.setTimeout(()=>t(),e)})}getLayerSourceRows(){return this.hass?this.getLayerSourceEntityIds().map(e=>({entityId:e,entity:this.hass?.states[e]})).filter(e=>!!e.entity).map(e=>{let t=this.readStringListAttribute(e.entity,"options");return{...e,options:t,layerNumber:this.getLayerNumber(e.entityId)}}).filter(e=>e.options.length>0&&e.entity.state!=="unavailable"&&e.entity.state!=="unknown").sort((e,t)=>e.layerNumber-t.layerNumber):[]}getLayerSourceEntityIds(){let e=/^select\..*_layer_\d+_source$/,t=this.resolvedLayerSourceEntities,i=this.hass?Object.keys(this.hass.states).filter(s=>e.test(s)):[];return t.length===0?i:i.length===0?t:Array.from(new Set([...t,...i]))}getLayerNumber(e){let t=e.match(/_layer_(\d+)_source$/);if(!t)return Number.MAX_SAFE_INTEGER;let i=Number.parseInt(t[1],10);return Number.isFinite(i)?i:Number.MAX_SAFE_INTEGER}async handleBrightnessChanged(e){if(!this.hass)return;let t=this.getEntityId("power_entity")??"switch.novastar_h2_power_screen_output",i=this.hass.states[t];if(i&&i.state!=="on")return;let s=this.getEntityId("brightness_entity");if(!s)return;let r=e.target,n=Number.parseFloat(r.value);Number.isFinite(n)&&await this.hass.callService?.("number","set_value",{entity_id:s,value:n})}async handlePowerToggle(){if(!this.hass)return;let e=this.getEntityId("power_entity")??"switch.novastar_h2_power_screen_output",t=this.hass.states[e];if(!t)return;let s=(this.optimisticPowerState??t.state)!=="on";this.optimisticPowerState=s?"on":"off",this.requestUpdate();let r=s?"turn_on":"turn_off";try{await this.hass.callService?.("switch",r,{entity_id:e})}catch{this.optimisticPowerState=void 0,this.requestUpdate()}}async handlePresetButtonClick(e){if(!this.hass)return;let t=this.getEntityId("preset_entity"),i=e.trim();!t||!i||(await this.hass.callService?.("select","select_option",{entity_id:t,option:i}),this.reloadLayerSources(),await this.waitFor(350),this.reloadLayerSources())}async handleLayerSourceChanged(e){if(!this.hass)return;let t=e.target,i=t.dataset.entityId,s=t.value?.trim();!i||!s||await this.selectLayerSourceOption(i,s)}async selectLayerSourceOption(e,t){this.hass&&await this.hass.callService?.("select","select_option",{entity_id:e,option:t})}syncOptimisticPowerState(){if(!this.hass||!this.optimisticPowerState)return;let e=this.getEntityId("power_entity")??"switch.novastar_h2_power_screen_output",t=this.hass.states[e];if(!t){this.optimisticPowerState=void 0;return}t.state===this.optimisticPowerState&&(this.optimisticPowerState=void 0)}getEntityId(e){let t=this.config?.[e];if(t&&t.trim())return t;let i=this.resolvedEntities[e];if(i&&i.trim())return i}async ensureResolvedEntities(){if(!this.hass||!this.config)return;let e=this.config.device_id?.trim();if(!e){(this.resolvedDeviceId||Object.keys(this.resolvedEntities).length>0)&&(this.resolvedEntities={},this.resolvedLayerSourceEntities=[],this.resolvedDeviceId=void 0,this.resolvedForHass=void 0,this.requestUpdate());return}if(this.hass.callWS&&this.resolvingDeviceId!==e&&!(this.resolvedDeviceId===e&&this.resolvedForHass===this.hass)){this.resolvingDeviceId=e;try{let t=await this.hass.callWS({type:"config/entity_registry/list"});if(!Array.isArray(t))return;let i=t.filter(a=>{if(!a||typeof a!="object")return!1;let c=a;return c.device_id===e&&!c.disabled_by&&!c.hidden_by&&typeof c.entity_id=="string"}).map(a=>a.entity_id),s=/^select\..*_layer_\d+_source$/,r=i.filter(a=>s.test(a)).sort((a,c)=>this.getLayerNumber(a)-this.getLayerNumber(c)),n={power_entity:this.pickEntity(i,[/_power_screen_output$/,/_screen_output$/],["switch"]),preset_entity:this.pickEntity(i,[/_preset$/,/_layer_\d+_source$/],["select"]),screens_entity:this.pickEntity(i,[/_screens$/],["sensor"]),layers_entity:this.pickEntity(i,[/_layers$/],["sensor"]),controller_entity:this.pickEntity(i,[/_device_status$/],["sensor"]),status_entity:this.pickEntity(i,[/_signal_status$/],["sensor"]),brightness_entity:this.pickEntity(i,[/_brightness$/],["number","sensor"]),temperature_entity:this.pickEntity(i,[/_temperature_status$/,/_temp_status$/],["sensor"])};n.controller_entity||=this.pickEntity(i,[/^media_player\./],["media_player"]),n.controller_entity||=this.pickEntity(i,[/_status$/],["sensor"]),this.resolvedEntities=n,this.resolvedLayerSourceEntities=r,this.resolvedDeviceId=e,this.resolvedForHass=this.hass,this.requestUpdate()}catch{}finally{this.resolvingDeviceId===e&&(this.resolvingDeviceId=void 0)}}}pickEntity(e,t,i){for(let s of t){let r=e.find(n=>s.test(n));if(r)return r}for(let s of i){let r=`${s}.`,n=e.find(a=>a.startsWith(r));if(n)return n}}},Me=class extends x{hass;config={type:"custom:novastar-h-series-card"};showOverrides=!1;localDeviceId;autoDetectedDeviceId;deviceNameById={};loadingDeviceNames=!1;attemptedAutoDeviceDefault=!1;static properties={hass:{attribute:!1},config:{attribute:!1},showOverrides:{attribute:!1}};setConfig(e){let t={...e};t.type||="custom:novastar-h-series-card",this.config=t;let i=t.device_id?.trim();i&&(this.localDeviceId=i,this.autoDetectedDeviceId=i),this.showOverrides=!!(t.power_entity||t.preset_entity||t.screens_entity||t.layers_entity||t.controller_entity||t.status_entity||t.brightness_entity||t.temperature_entity),this.attemptedAutoDeviceDefault=!1}updated(){this.ensureDefaultDeviceId(),this.ensureDeviceNames()}render(){if(!this.hass)return l;let e=!!customElements.get("ha-device-picker"),t=this.config.device_id?.trim()||this.localDeviceId||this.autoDetectedDeviceId||"",i=this.getSelectedDeviceLabel(t),s=(this.config.display_mode??"standard")==="compact",r=this.config.show_header_in_compact===!0;return v`
       <div class="editor">
         <ha-textfield
-          label="Title"
-          .value=${this.config.title??""}
-          .configValue=${"title"}
+          label="Header"
+          .value=${this.config.header??""}
+          .configValue=${"header"}
           @input=${this.handleInputChanged}
         ></ha-textfield>
         <label class="select-label" for="display-mode-select">Display mode</label>
         <select
           id="display-mode-select"
           class="editor-select"
-          .value=${this.config.display_mode??"full"}
+          .value=${this.config.display_mode??"standard"}
           .configValue=${"display_mode"}
           @change=${this.handleInputChanged}
         >
-          <option value="full">Full</option>
-          <option value="layout">Layout only</option>
+          <option value="detailed">Detailed</option>
+          <option value="standard">Standard</option>
+          <option value="compact">Compact</option>
         </select>
         <label class="checkbox-row">
           <input
@@ -500,23 +722,23 @@ var nt=globalThis,ot=nt.ShadowRoot&&(nt.ShadyCSS===void 0||nt.ShadyCSS.nativeSha
             .checked=${r}
             .disabled=${!s}
             ?disabled=${!s}
-            .configValue=${"show_title_in_layout"}
+            .configValue=${"show_header_in_compact"}
             @change=${this.handleBooleanInputChanged}
           />
-          <span>Show title bar in layout mode</span>
+          <span>Show header in Compact mode</span>
         </label>
-        ${t?g`
+        ${e?v`
               <ha-device-picker
                 .hass=${this.hass}
                 label="Device picker (optional)"
-                .value=${e}
+                .value=${t}
                 .configValue=${"device_id"}
                 @value-changed=${this.handleEntityChanged}
               ></ha-device-picker>
-            `:g`
+            `:v`
               <ha-textfield
                 label="Device ID"
-                .value=${e}
+                .value=${t}
                 .configValue=${"device_id"}
                 @input=${this.handleInputChanged}
               ></ha-textfield>
@@ -590,7 +812,7 @@ var nt=globalThis,ot=nt.ShadowRoot&&(nt.ShadyCSS===void 0||nt.ShadyCSS.nativeSha
           </div>
         </details>
       </div>
-    `}handleOverridesToggle(t){let e=t.target;this.showOverrides=e.open}handleInputChanged(t){let e=t.target,i=e.configValue;if(!i)return;let s=e.value?.trim()??"";this.updateConfigValue(i,s)}handleBooleanInputChanged(t){let e=t.target,i=e.configValue;i&&this.updateBooleanConfigValue(i,!!e.checked)}handleEntityChanged(t){let i=t.target.configValue;if(!i||!t.detail||t.detail.value===void 0)return;let s=t.detail.value?.trim()??"";this.updateConfigValue(i,s)}updateConfigValue(t,e){if(t==="device_id"&&(this.localDeviceId=e||void 0,this.autoDetectedDeviceId=e||this.autoDetectedDeviceId),(this.config[t]??"")===e)return;let s={...this.config},r=t==="display_mode"&&e==="full"?"":e;r?s[t]=r:delete s[t],s.type||(s.type="custom:novastar-h-series-card"),s.controller_entity||(s.controller_entity=""),this.config=s,this.dispatchEvent(new CustomEvent("config-changed",{detail:{config:s},bubbles:!0,composed:!0}))}updateBooleanConfigValue(t,e){if(this.config[t]===!0===e)return;let s={...this.config};e?s[t]=!0:delete s[t],s.type||(s.type="custom:novastar-h-series-card"),s.controller_entity||(s.controller_entity=""),this.config=s,this.dispatchEvent(new CustomEvent("config-changed",{detail:{config:s},bubbles:!0,composed:!0}))}async ensureDefaultDeviceId(){if(!(this.attemptedAutoDeviceDefault||!this.hass?.callWS)){if(this.config.device_id?.trim()){this.attemptedAutoDeviceDefault=!0;return}this.attemptedAutoDeviceDefault=!0;try{let t=await this.hass.callWS({type:"config/entity_registry/list"});if(!Array.isArray(t))return;let e=t.filter(i=>{if(!i||typeof i!="object")return!1;let s=i;return s.platform==="novastar_h"&&typeof s.device_id=="string"&&!s.disabled_by&&!s.hidden_by}).map(i=>i.device_id)[0];if(!e)return;this.autoDetectedDeviceId=e,this.localDeviceId=e,this.requestUpdate(),this.updateConfigValue("device_id",e)}catch{}}}async ensureDeviceNames(){if(!this.hass?.callWS||this.loadingDeviceNames)return;let t=this.config.device_id??this.localDeviceId;if(!(!t||this.deviceNameById[t])){this.loadingDeviceNames=!0;try{let e=await this.hass.callWS({type:"config/device_registry/list"});if(!Array.isArray(e))return;let i={...this.deviceNameById};for(let s of e){if(!s||typeof s!="object")continue;let r=s,n=r.id;if(typeof n!="string")continue;let a=r.name_by_user??r.name??r.model;typeof a=="string"&&a.trim()&&(i[n]=a.trim())}this.deviceNameById=i,this.requestUpdate()}catch{}finally{this.loadingDeviceNames=!1}}}getSelectedDeviceLabel(t){if(!t)return"Auto-detecting...";let e=this.deviceNameById[t];return e?`${e} (${t})`:t}static styles=at`
+    `}handleOverridesToggle(e){let t=e.target;this.showOverrides=t.open}handleInputChanged(e){let t=e.target,i=t.configValue;if(!i)return;let s=t.value?.trim()??"";this.updateConfigValue(i,s)}handleBooleanInputChanged(e){let t=e.target,i=t.configValue;i&&this.updateBooleanConfigValue(i,!!t.checked)}handleEntityChanged(e){let i=e.target.configValue;if(!i||!e.detail||e.detail.value===void 0)return;let s=e.detail.value?.trim()??"";this.updateConfigValue(i,s)}updateConfigValue(e,t){if(e==="device_id"&&(this.localDeviceId=t||void 0,this.autoDetectedDeviceId=t||this.autoDetectedDeviceId),(this.config[e]??"")===t)return;let s={...this.config},r=e==="display_mode"&&t==="standard"?"":t;r?s[e]=r:delete s[e],s.type||(s.type="custom:novastar-h-series-card"),s.controller_entity||(s.controller_entity=""),this.config=s,this.dispatchEvent(new CustomEvent("config-changed",{detail:{config:s},bubbles:!0,composed:!0}))}updateBooleanConfigValue(e,t){if(this.config[e]===!0===t)return;let s={...this.config};t?s[e]=!0:delete s[e],s.type||(s.type="custom:novastar-h-series-card"),s.controller_entity||(s.controller_entity=""),this.config=s,this.dispatchEvent(new CustomEvent("config-changed",{detail:{config:s},bubbles:!0,composed:!0}))}async ensureDefaultDeviceId(){if(!(this.attemptedAutoDeviceDefault||!this.hass?.callWS)){if(this.config.device_id?.trim()){this.attemptedAutoDeviceDefault=!0;return}this.attemptedAutoDeviceDefault=!0;try{let e=await this.hass.callWS({type:"config/entity_registry/list"});if(!Array.isArray(e))return;let t=e.filter(i=>{if(!i||typeof i!="object")return!1;let s=i;return s.platform==="novastar_h"&&typeof s.device_id=="string"&&!s.disabled_by&&!s.hidden_by}).map(i=>i.device_id)[0];if(!t)return;this.autoDetectedDeviceId=t,this.localDeviceId=t,this.requestUpdate(),this.updateConfigValue("device_id",t)}catch{}}}async ensureDeviceNames(){if(!this.hass?.callWS||this.loadingDeviceNames)return;let e=this.config.device_id??this.localDeviceId;if(!(!e||this.deviceNameById[e])){this.loadingDeviceNames=!0;try{let t=await this.hass.callWS({type:"config/device_registry/list"});if(!Array.isArray(t))return;let i={...this.deviceNameById};for(let s of t){if(!s||typeof s!="object")continue;let r=s,n=r.id;if(typeof n!="string")continue;let a=r.name_by_user??r.name??r.model;typeof a=="string"&&a.trim()&&(i[n]=a.trim())}this.deviceNameById=i,this.requestUpdate()}catch{}finally{this.loadingDeviceNames=!1}}}getSelectedDeviceLabel(e){if(!e)return"Auto-detecting...";let t=this.deviceNameById[e];return t?`${t} (${e})`:e}static styles=ue`
     .editor {
       display: grid;
       gap: 12px;
@@ -651,7 +873,7 @@ var nt=globalThis,ot=nt.ShadowRoot&&(nt.ShadyCSS===void 0||nt.ShadyCSS.nativeSha
       gap: 12px;
       margin-top: 12px;
     }
-  `};try{customElements.define("novastar-h-series-card",At)}catch{}try{customElements.define("novastar-h-series-card-editor",Ct)}catch{}window.customCards=window.customCards||[];window.customCards.push({type:"novastar-h-series-card",name:"Novastar H Series Card",description:"Displays core status information for a Novastar H Series controller from device or entity config."});export{At as NovastarHSeriesCard};
+  `};try{customElements.define("novastar-h-series-card",Ie)}catch{}try{customElements.define("novastar-h-series-card-editor",Me)}catch{}window.customCards=window.customCards||[];window.customCards.push({type:"novastar-h-series-card",name:"Novastar H Series Card",description:"Displays core status information for a Novastar H Series controller from device or entity config."});export{Ie as NovastarHSeriesCard};
 /*! Bundled license information:
 
 @lit/reactive-element/css-tag.js:

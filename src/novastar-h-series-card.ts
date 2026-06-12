@@ -13,11 +13,13 @@ type HomeAssistant = {
   callWS?: (message: Record<string, unknown>) => Promise<unknown>;
 };
 
+type DisplayMode = "detailed" | "standard" | "compact";
+
 type NovastarCardConfig = {
   type: string;
-  title?: string;
-  display_mode?: "full" | "layout";
-  show_title_in_layout?: boolean;
+  header?: string;
+  display_mode?: DisplayMode;
+  show_header_in_compact?: boolean;
   debug_layout?: boolean;
   device_id?: string;
   power_entity?: string;
@@ -143,7 +145,7 @@ export class NovastarHSeriesCard extends LitElement {
   public static getStubConfig(): NovastarCardConfig {
     return {
       type: "custom:novastar-h-series-card",
-      title: "Novastar H Series"
+      header: "Novastar H Series"
     };
   }
 
@@ -209,399 +211,688 @@ export class NovastarHSeriesCard extends LitElement {
     const brightnessMin = brightnessEntity ? this.readNumberAttribute(brightnessEntity, "min", 0) : 0;
     const brightnessMax = brightnessEntity ? this.readNumberAttribute(brightnessEntity, "max", 100) : 100;
     const brightnessStep = brightnessEntity ? this.readNumberAttribute(brightnessEntity, "step", 1) : 1;
-    const showBrightnessSlider = brightnessEntity && Number.isFinite(brightnessValue);
+    const showBrightnessSlider = Boolean(brightnessEntity) && Number.isFinite(brightnessValue);
+    const brightnessUnit = brightnessEntity
+      ? this.readStringAttribute(brightnessEntity, "unit_of_measurement") ?? ""
+      : "";
     const presetOptions = this.readStringListAttribute(presetEntity, "options");
+    const selectedPresetOption = presetEntity
+      ? this.resolveSelectedOption(presetEntity, presetOptions)
+      : "";
     const layoutPayload = this.readLayoutPayload(screensEntity, layersEntity);
     const controllerValue = statusEntity
       ? `${controller.state} (${statusEntity.state})`
       : controller.state;
-    const layoutOnlyMode = this.getDisplayMode() === "layout";
-    const showTitleInLayout = this.config.show_title_in_layout === true;
-    const compactLayoutMode = layoutOnlyMode && !showTitleInLayout;
+    const temperatureUnit = temperatureEntity
+      ? this.readStringAttribute(temperatureEntity, "unit_of_measurement") ?? ""
+      : "";
+
+    const displayMode = this.getDisplayMode();
+    const isCompact = displayMode === "compact";
+    const isDetailed = displayMode === "detailed";
+    const showHeaderInCompact = this.config.show_header_in_compact === true;
+    const showHeader = !isCompact || showHeaderInCompact;
+    const bareLayoutMode = isCompact && !showHeaderInCompact;
+    const headerText = this.config.header ?? "Novastar H Series";
+    const contentClasses = ["content", `content--${displayMode}`, bareLayoutMode ? "content--bare" : ""]
+      .filter(Boolean)
+      .join(" ");
 
     return html`
-      <ha-card>
-        ${layoutOnlyMode && !showTitleInLayout
-          ? nothing
-          : html`
+      <ha-card class="nova-card nova-card--${displayMode} ${powerIsOn ? "is-on" : "is-off"}">
+        ${showHeader
+          ? html`
               <div class="header-row">
-                <div class="header">${this.config.title ?? "Novastar H Series"}</div>
-                <div class="header-controls">
-                  ${brightnessEntity && showBrightnessSlider
+                <div class="header-lead">
+                  ${!isDetailed && powerEntity
+                    ? html`<span
+                        class="status-dot ${powerIsOn ? "status-dot--on" : "status-dot--off"}"
+                        title=${controllerValue}
+                      ></span>`
+                    : nothing}
+                  <div class="header">${headerText}</div>
+                </div>
+                ${powerEntity ? this.renderPowerButton(powerIsOn) : nothing}
+              </div>
+            `
+          : nothing}
+        <div class=${contentClasses}>
+          ${isCompact
+            ? nothing
+            : isDetailed
+              ? html`
+                  <div class="row">
+                    <span class="label">Status</span>
+                    <span class="value status-value status-value--${powerIsOn ? "on" : "off"}">${controllerValue}</span>
+                  </div>
+                  ${temperatureEntity
                     ? html`
-                        <div class="header-brightness" title="Brightness">
-                          <input
-                            class="brightness-slider header-brightness-slider"
-                            type="range"
-                            min=${brightnessMin}
-                            max=${brightnessMax}
-                            step=${brightnessStep}
-                            .value=${String(brightnessValue)}
-                            .disabled=${powerFadeToBlack}
-                            ?disabled=${powerFadeToBlack}
-                            @change=${this.handleBrightnessChanged}
-                          />
+                        <div class="row">
+                          <span class="label">Temperature</span>
+                          <span class="value">${temperatureEntity.state}${temperatureUnit}</span>
                         </div>
                       `
                     : nothing}
-                  ${powerEntity
+                  ${brightnessEntity
                     ? html`
-                        <label class="power-toggle" title="Toggle screen output">
-                          <input
-                            type="checkbox"
-                            .checked=${powerIsOn}
-                            @change=${this.handlePowerToggle}
-                          />
-                          <span class="power-slider"></span>
-                        </label>
+                        <div class="row input-row">
+                          <span class="label">Brightness</span>
+                          ${showBrightnessSlider
+                            ? this.renderBrightnessControl(
+                                brightnessMin,
+                                brightnessMax,
+                                brightnessStep,
+                                brightnessValue,
+                                powerFadeToBlack,
+                                brightnessUnit
+                              )
+                            : html`<span class="value">${brightnessEntity.state}${brightnessUnit}</span>`}
+                        </div>
                       `
                     : nothing}
-                </div>
-              </div>
-            `}
-        <div class=${compactLayoutMode ? "content content--compact" : "content"}>
-          ${layoutOnlyMode
-            ? nothing
-            : html`
-                <div class="row">
-                  <span class="label">Status</span>
-                  <span class="value">${controllerValue}</span>
-                </div>
-                ${temperatureEntity
-                  ? html`<div class="row"><span class="label">Temperature</span><span class="value">${temperatureEntity.state}</span></div>`
-                  : nothing}
-                ${presetEntity
-                  ? presetOptions.length > 0
-                    ? (() => {
-                        const selectedPresetOption = this.resolveSelectedOption(presetEntity, presetOptions);
-                        return html`
-                          <div class="row input-row">
-                            <span class="label">Preset</span>
-                            <select
-                              class="input-select"
-                              .disabled=${powerFadeToBlack}
-                              ?disabled=${powerFadeToBlack}
-                              @change=${this.handlePresetSelectionChanged}
-                            >
-                              ${presetOptions.map((option) => html`
-                                <option
-                                  .value=${option}
-                                  ?selected=${this.optionEquals(option, selectedPresetOption)}
-                                >${option}</option>
-                              `) }
-                            </select>
-                          </div>
-                        `;
-                      })()
-                    : html`<div class="row"><span class="label">Preset</span><span class="value">${presetEntity.state}</span></div>`
-                  : nothing}
-              `}
+                  ${presetEntity
+                    ? html`
+                        <div class="row input-row preset-row">
+                          <span class="label">Preset</span>
+                          ${presetOptions.length > 0
+                            ? this.renderPresetChips(presetOptions, selectedPresetOption, powerFadeToBlack)
+                            : html`<span class="value">${presetEntity.state}</span>`}
+                        </div>
+                      `
+                    : nothing}
+                `
+              : html`
+                  ${showBrightnessSlider
+                    ? html`<div class="standard-block">${this.renderBrightnessControl(
+                        brightnessMin,
+                        brightnessMax,
+                        brightnessStep,
+                        brightnessValue,
+                        powerFadeToBlack,
+                        brightnessUnit
+                      )}</div>`
+                    : nothing}
+                  ${presetEntity && presetOptions.length > 0
+                    ? html`<div class="standard-block standard-block--chips">${this.renderPresetChips(
+                        presetOptions,
+                        selectedPresetOption,
+                        powerFadeToBlack
+                      )}</div>`
+                    : nothing}
+                `}
           ${layoutPayload
-            ? this.renderLayoutPreview(layoutPayload, compactLayoutMode)
-            : layoutOnlyMode
+            ? this.renderLayoutPreview(layoutPayload, bareLayoutMode)
+            : isCompact
               ? html`<div class="row"><span class="label">Layout</span><span class="value">Unavailable</span></div>`
               : nothing}
-          ${layoutOnlyMode
-            ? nothing
-            : brightnessEntity
-              ? showBrightnessSlider
-                ? nothing
-                : html`<div class="row"><span class="label">Brightness</span><span class="value">${brightnessEntity.state}</span></div>`
-              : nothing}
+          ${isDetailed ? this.renderVersionFooter() : nothing}
         </div>
       </ha-card>
     `;
   }
 
-  private getDisplayMode(): "full" | "layout" {
-    return this.config?.display_mode === "layout"
-      ? "layout"
-      : "full";
+  private getDisplayMode(): DisplayMode {
+    const mode = this.config?.display_mode;
+    if (mode === "detailed" || mode === "compact") {
+      return mode;
+    }
+
+    return "standard";
+  }
+
+  private renderPowerButton(powerIsOn: boolean) {
+    return html`
+      <button
+        type="button"
+        class="power-button ${powerIsOn ? "power-button--on" : "power-button--off"}"
+        role="switch"
+        aria-checked=${powerIsOn ? "true" : "false"}
+        aria-label="Toggle screen output"
+        title="Toggle screen output"
+        @click=${this.handlePowerToggle}
+      >
+        <svg class="power-button-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <path
+            d="M12 3a1 1 0 0 1 1 1v8a1 1 0 0 1-2 0V4a1 1 0 0 1 1-1zm5.66 2.93a1 1 0 0 1 1.41 0 9 9 0 1 1-12.73 0 1 1 0 1 1 1.41 1.42 7 7 0 1 0 9.9 0 1 1 0 0 1 0-1.42z"
+          ></path>
+        </svg>
+      </button>
+    `;
+  }
+
+  private renderBrightnessControl(
+    min: number,
+    max: number,
+    step: number,
+    value: number,
+    disabled: boolean,
+    unit: string
+  ) {
+    const span = max - min || 1;
+    const percent = Math.max(0, Math.min(100, Math.round(((value - min) / span) * 100)));
+    const readout = unit ? `${Math.round(value)}${unit}` : `${percent}%`;
+    return html`
+      <div class="brightness-control" style=${`--nova-brightness-fill:${percent}%`}>
+        <svg class="brightness-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <path
+            d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zm0-6a1 1 0 0 1 1 1v1.5a1 1 0 1 1-2 0V3a1 1 0 0 1 1-1zm0 16.5a1 1 0 0 1 1 1V21a1 1 0 1 1-2 0v-1.5a1 1 0 0 1 1-1zM4.93 4.93a1 1 0 0 1 1.41 0l1.06 1.06A1 1 0 0 1 5.99 7.4L4.93 6.34a1 1 0 0 1 0-1.41zm11.67 11.67a1 1 0 0 1 1.41 0l1.06 1.06a1 1 0 0 1-1.41 1.41l-1.06-1.06a1 1 0 0 1 0-1.41zM2 12a1 1 0 0 1 1-1h1.5a1 1 0 1 1 0 2H3a1 1 0 0 1-1-1zm17.5 0a1 1 0 0 1 1-1H22a1 1 0 1 1 0 2h-1.5a1 1 0 0 1-1-1zM4.93 19.07a1 1 0 0 1 0-1.41l1.06-1.06a1 1 0 1 1 1.41 1.41l-1.06 1.06a1 1 0 0 1-1.41 0zM16.6 7.4a1 1 0 0 1 0-1.41l1.06-1.06a1 1 0 1 1 1.41 1.41L18.01 7.4a1 1 0 0 1-1.41 0z"
+          ></path>
+        </svg>
+        <input
+          class="brightness-slider"
+          type="range"
+          min=${min}
+          max=${max}
+          step=${step}
+          .value=${String(value)}
+          .disabled=${disabled}
+          ?disabled=${disabled}
+          aria-label="Brightness"
+          @change=${this.handleBrightnessChanged}
+        />
+        <span class="brightness-value">${readout}</span>
+      </div>
+    `;
+  }
+
+  private renderPresetChips(options: string[], selected: string, disabled: boolean) {
+    return html`
+      <div class="preset-chips" role="group" aria-label="Preset">
+        ${options.map((option) => {
+          const isActive = this.optionEquals(option, selected);
+          return html`
+            <button
+              type="button"
+              class="preset-chip ${isActive ? "preset-chip--active" : ""}"
+              ?disabled=${disabled}
+              aria-pressed=${isActive ? "true" : "false"}
+              @click=${() => this.handlePresetButtonClick(option)}
+            >${option}</button>
+          `;
+        })}
+      </div>
+    `;
+  }
+
+  private renderVersionFooter() {
+    return html`<div class="version-footer">${NovastarHSeriesCard.LAYOUT_BUILD_MARKER}</div>`;
   }
 
   static styles = css`
+    :host {
+      --nova-accent: var(--primary-color, #2196f3);
+      --nova-on-accent: var(--text-primary-color, #ffffff);
+      --nova-text: var(--primary-text-color, #1c1c1c);
+      --nova-muted: var(--secondary-text-color, #6f6f6f);
+      --nova-divider: var(--divider-color, rgba(120, 120, 120, 0.22));
+      --nova-surface: var(--card-background-color, var(--ha-card-background, #ffffff));
+      --nova-surface-2: color-mix(in srgb, var(--nova-surface) 84%, var(--nova-text) 16%);
+      --nova-success: var(--success-color, #43a047);
+      --nova-radius: 16px;
+      --nova-radius-sm: 12px;
+      --nova-pill: 999px;
+      --nova-gap: 14px;
+      --nova-touch: 44px;
+      display: block;
+    }
+
+    ha-card {
+      border-radius: var(--nova-radius);
+      overflow: hidden;
+    }
+
     .header-row {
       align-items: center;
       display: flex;
+      gap: var(--nova-gap);
       justify-content: space-between;
-      gap: 12px;
-      padding: 16px 16px 0;
+      padding: 18px 18px 4px;
+    }
+
+    .header-lead {
+      align-items: center;
+      display: inline-flex;
+      gap: 10px;
+      min-width: 0;
     }
 
     .header {
-      font-size: 1rem;
+      font-size: 1.15rem;
       font-weight: 600;
+      letter-spacing: 0.01em;
+      line-height: 1.2;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .status-dot {
+      border-radius: 50%;
+      flex: none;
+      height: 10px;
+      transition: background-color 0.25s ease, box-shadow 0.25s ease;
+      width: 10px;
+    }
+
+    .status-dot--on {
+      background: var(--nova-success);
+      box-shadow: 0 0 8px color-mix(in srgb, var(--nova-success) 70%, transparent);
+    }
+
+    .status-dot--off {
+      background: color-mix(in srgb, var(--nova-muted) 55%, transparent);
+    }
+
+    .power-button {
+      align-items: center;
+      background: var(--nova-surface-2);
+      border: 1px solid var(--nova-divider);
+      border-radius: 50%;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
+      box-sizing: border-box;
+      color: color-mix(in srgb, var(--nova-text) 60%, transparent);
+      cursor: pointer;
+      display: inline-flex;
+      flex: none;
+      height: var(--nova-touch);
+      justify-content: center;
+      padding: 0;
+      transition: background 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.08s ease;
+      width: var(--nova-touch);
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .power-button:hover {
+      border-color: color-mix(in srgb, var(--nova-accent) 45%, var(--nova-divider));
+    }
+
+    .power-button:active {
+      transform: scale(0.94);
+    }
+
+    .power-button:focus-visible {
+      outline: 2px solid var(--nova-accent);
+      outline-offset: 2px;
+    }
+
+    .power-button-icon {
+      fill: currentColor;
+      height: 22px;
+      width: 22px;
+    }
+
+    .power-button--on {
+      background:
+        radial-gradient(circle at 30% 26%,
+          color-mix(in srgb, var(--nova-accent) 76%, #ffffff) 8%,
+          color-mix(in srgb, var(--nova-accent) 90%, #000000) 100%);
+      border-color: color-mix(in srgb, var(--nova-accent) 55%, #ffffff);
+      box-shadow:
+        0 0 0 1px color-mix(in srgb, var(--nova-accent) 35%, transparent),
+        0 0 16px color-mix(in srgb, var(--nova-accent) 38%, transparent),
+        0 2px 8px rgba(0, 0, 0, 0.28),
+        inset 0 1px 0 rgba(255, 255, 255, 0.28);
+      color: var(--nova-on-accent);
     }
 
     .content {
-      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: var(--nova-gap);
+      padding: 16px 18px 18px;
     }
 
-    .content--compact {
-      padding-top: 16px;
+    .content--standard {
+      gap: 16px;
+    }
+
+    .content--bare {
+      gap: 0;
+      padding: 0;
     }
 
     .row {
       align-items: center;
       display: flex;
+      gap: 12px;
       justify-content: space-between;
-      margin-bottom: 8px;
-    }
-
-    .row:last-child {
-      margin-bottom: 0;
+      min-height: 28px;
     }
 
     .label {
-      color: var(--secondary-text-color);
+      color: var(--nova-muted);
       font-size: 0.95rem;
+      font-weight: 500;
     }
 
     .value {
-      font-weight: 500;
+      color: var(--nova-text);
+      font-weight: 600;
+      text-align: right;
       text-transform: capitalize;
     }
 
-    .brightness-row {
-      margin-bottom: 8px;
-    }
-
-    .header-controls {
+    .status-value {
       align-items: center;
+      border-radius: var(--nova-pill);
       display: inline-flex;
-      gap: 10px;
-      min-height: 24px;
+      font-size: 0.85rem;
+      gap: 6px;
+      padding: 4px 12px;
+      text-transform: none;
     }
 
-    .header-brightness {
-      align-items: center;
-      display: inline-flex;
-      min-width: 120px;
+    .status-value--on {
+      background: color-mix(in srgb, var(--nova-success) 16%, transparent);
+      color: color-mix(in srgb, var(--nova-success) 78%, var(--nova-text));
     }
 
-    .header-brightness-slider {
-      width: 120px;
-    }
-
-    .brightness-header {
-      align-items: center;
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 6px;
-    }
-
-    .brightness-slider {
-      box-sizing: border-box;
-      width: 100%;
-    }
-
-    .brightness-slider:disabled {
-      opacity: 0.45;
-      pointer-events: none;
-    }
-
-    .power-toggle {
-      display: inline-flex;
-      height: 22px;
-      position: relative;
-      width: 40px;
-    }
-
-    .power-toggle input {
-      height: 0;
-      opacity: 0;
-      width: 0;
-    }
-
-    .power-slider {
-      background-color: var(--disabled-color);
-      border-radius: 999px;
-      cursor: pointer;
-      inset: 0;
-      position: absolute;
-      transition: 0.2s;
-    }
-
-    .power-slider::before {
-      background-color: var(--card-background-color);
-      border-radius: 50%;
-      content: "";
-      height: 16px;
-      left: 3px;
-      position: absolute;
-      top: 3px;
-      transition: 0.2s;
-      width: 16px;
-    }
-
-    .power-toggle input:checked + .power-slider {
-      background-color: var(--success-color, var(--primary-color));
-    }
-
-    .power-toggle input:checked + .power-slider::before {
-      transform: translateX(18px);
+    .status-value--off {
+      background: color-mix(in srgb, var(--nova-muted) 16%, transparent);
+      color: var(--nova-muted);
     }
 
     .input-row {
       align-items: center;
     }
 
-    .input-select {
-      background: var(--card-background-color);
-      border: 1px solid var(--divider-color);
-      border-radius: 6px;
-      color: var(--primary-text-color);
-      font: inherit;
-      max-width: 60%;
-      min-width: 140px;
-      padding: 4px 8px;
+    .preset-row {
+      align-items: flex-start;
+      flex-wrap: wrap;
     }
 
-    .input-select:disabled {
+    .standard-block {
+      display: flex;
+    }
+
+    .brightness-control {
+      align-items: center;
+      background: var(--nova-surface-2);
+      border: 1px solid var(--nova-divider);
+      border-radius: var(--nova-pill);
+      box-sizing: border-box;
+      display: flex;
+      flex: 1 1 auto;
+      gap: 12px;
+      min-height: var(--nova-touch);
+      padding: 0 16px;
+      width: 100%;
+    }
+
+    .brightness-icon {
+      color: var(--nova-muted);
+      fill: currentColor;
+      flex: none;
+      height: 20px;
+      width: 20px;
+    }
+
+    .brightness-value {
+      color: var(--nova-text);
+      flex: none;
+      font-size: 0.9rem;
+      font-weight: 600;
+      min-width: 42px;
+      text-align: right;
+    }
+
+    .brightness-slider {
+      -webkit-appearance: none;
+      appearance: none;
+      background: transparent;
+      box-sizing: border-box;
+      flex: 1 1 auto;
+      height: var(--nova-touch);
+      margin: 0;
+      width: 100%;
+    }
+
+    .brightness-slider::-webkit-slider-runnable-track {
+      background: linear-gradient(
+        to right,
+        var(--nova-accent) 0%,
+        var(--nova-accent) var(--nova-brightness-fill, 50%),
+        color-mix(in srgb, var(--nova-text) 18%, transparent) var(--nova-brightness-fill, 50%),
+        color-mix(in srgb, var(--nova-text) 18%, transparent) 100%
+      );
+      border-radius: var(--nova-pill);
+      height: 6px;
+    }
+
+    .brightness-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      background: #ffffff;
+      border: 1px solid color-mix(in srgb, var(--nova-text) 20%, transparent);
+      border-radius: 50%;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+      height: 22px;
+      margin-top: -8px;
+      width: 22px;
+    }
+
+    .brightness-slider::-moz-range-track {
+      background: color-mix(in srgb, var(--nova-text) 18%, transparent);
+      border-radius: var(--nova-pill);
+      height: 6px;
+    }
+
+    .brightness-slider::-moz-range-progress {
+      background: var(--nova-accent);
+      border-radius: var(--nova-pill);
+      height: 6px;
+    }
+
+    .brightness-slider::-moz-range-thumb {
+      background: #ffffff;
+      border: 1px solid color-mix(in srgb, var(--nova-text) 20%, transparent);
+      border-radius: 50%;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+      height: 22px;
+      width: 22px;
+    }
+
+    .brightness-slider:disabled {
+      opacity: 0.4;
+      pointer-events: none;
+    }
+
+    .preset-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .preset-chip {
+      background: var(--nova-surface-2);
+      border: 1px solid var(--nova-divider);
+      border-radius: var(--nova-pill);
+      color: var(--nova-text);
+      cursor: pointer;
+      font: inherit;
+      font-size: 0.92rem;
+      font-weight: 600;
+      min-height: 38px;
+      padding: 8px 16px;
+      transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease, transform 0.08s ease;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .preset-chip:hover {
+      border-color: color-mix(in srgb, var(--nova-accent) 50%, var(--nova-divider));
+    }
+
+    .preset-chip:active {
+      transform: scale(0.96);
+    }
+
+    .preset-chip:focus-visible {
+      outline: 2px solid var(--nova-accent);
+      outline-offset: 2px;
+    }
+
+    .preset-chip--active {
+      background: var(--nova-accent);
+      border-color: color-mix(in srgb, var(--nova-accent) 60%, #ffffff);
+      box-shadow: 0 2px 10px color-mix(in srgb, var(--nova-accent) 35%, transparent);
+      color: var(--nova-on-accent);
+    }
+
+    .preset-chip:disabled {
       opacity: 0.45;
       pointer-events: none;
     }
 
     .layout-preview {
-      margin-top: 12px;
-      border-top: 1px solid var(--divider-color);
-      padding-top: 12px;
+      border-radius: var(--nova-radius-sm);
       position: relative;
     }
 
-    .layout-preview--compact {
-      margin-top: 0;
-      border-top: none;
-      padding-top: 0;
-    }
-
-    .layout-meta {
-      color: #9e9e9e;
-      font-size: 12px;
-      margin-bottom: 6px;
-    }
-
     .layout-title {
-      color: var(--secondary-text-color);
+      color: var(--nova-muted);
       font-size: 0.9rem;
       margin-bottom: 8px;
     }
 
     .layout-canvas {
-      width: 100%;
+      background: #08090b;
+      border: 1px solid var(--nova-divider);
+      border-radius: var(--nova-radius-sm);
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02), 0 6px 18px rgba(0, 0, 0, 0.18);
       display: block;
-      background: var(--card-background-color);
-      border: 1px solid var(--divider-color);
-      border-radius: 6px;
+      width: 100%;
+    }
+
+    .layout-preview--compact .layout-canvas {
+      border-radius: 0;
     }
 
     .layout-screen {
-      fill: #000000;
-      stroke: #4a4a4a;
-      stroke-width: 1;
+      fill: #06070a;
+      stroke: color-mix(in srgb, var(--nova-text) 22%, #3a3a3a);
     }
 
     .layout-layer {
-      fill: #d9d9d9;
+      fill: color-mix(in srgb, var(--nova-accent) 14%, #c9d2dc);
       fill-opacity: 1;
-      stroke: #808080;
-      stroke-width: 1;
+      stroke: color-mix(in srgb, var(--nova-accent) 55%, #8893a0);
     }
 
     .layout-layer-hitbox {
       cursor: pointer;
     }
 
+    .layout-label {
+      fill: var(--nova-text);
+      font-family: inherit;
+      font-size: 9px;
+      pointer-events: none;
+    }
+
+    .layout-empty {
+      fill: color-mix(in srgb, #ffffff 65%, transparent);
+      font-family: inherit;
+      font-size: 14px;
+    }
+
+    .version-footer {
+      color: var(--nova-muted);
+      font-size: 0.72rem;
+      letter-spacing: 0.02em;
+      opacity: 0.7;
+      text-align: right;
+    }
+
     .layer-source-modal {
       align-items: center;
-      background: rgba(0, 0, 0, 0.45);
-      border-radius: 6px;
+      backdrop-filter: blur(2px);
+      background: rgba(0, 0, 0, 0.55);
+      border-radius: var(--nova-radius-sm);
       display: flex;
-      inset: 12px 0 0;
+      inset: 0;
       justify-content: center;
-      padding: 12px;
+      padding: 16px;
       position: absolute;
       z-index: 2;
     }
 
     .layer-source-modal-content {
-      background: var(--card-background-color);
-      border: 1px solid var(--divider-color);
-      border-radius: 10px;
-      box-shadow: 0 8px 22px rgba(0, 0, 0, 0.35);
-      color: var(--primary-text-color);
-      max-width: min(420px, 96%);
-      padding: 12px;
+      background: var(--nova-surface);
+      border: 1px solid var(--nova-divider);
+      border-radius: var(--nova-radius);
+      box-shadow: 0 18px 48px rgba(0, 0, 0, 0.45);
+      color: var(--nova-text);
+      max-width: min(440px, 96%);
+      padding: 18px;
       width: 100%;
     }
 
     .layer-source-modal-title {
-      font-size: 0.95rem;
+      font-size: 1.05rem;
       font-weight: 600;
-      margin-bottom: 8px;
+      margin-bottom: 14px;
     }
 
     .layer-source-modal-options {
       display: grid;
-      gap: 8px;
-      max-height: 260px;
+      gap: 10px;
+      max-height: 300px;
       overflow: auto;
     }
 
     .layer-source-modal-option {
-      background: var(--card-background-color);
-      border: 1px solid var(--divider-color);
-      border-radius: 8px;
-      color: var(--primary-text-color);
+      align-items: center;
+      background: var(--nova-surface-2);
+      border: 1px solid var(--nova-divider);
+      border-radius: var(--nova-radius-sm);
+      color: var(--nova-text);
       cursor: pointer;
+      display: flex;
       font: inherit;
-      padding: 8px 10px;
+      font-size: 0.98rem;
+      font-weight: 500;
+      min-height: var(--nova-touch);
+      padding: 10px 16px;
       text-align: left;
+      transition: background 0.18s ease, border-color 0.18s ease;
       width: 100%;
     }
 
+    .layer-source-modal-option:hover {
+      border-color: color-mix(in srgb, var(--nova-accent) 45%, var(--nova-divider));
+    }
+
     .layer-source-modal-option.selected {
-      border-color: var(--primary-color);
-      box-shadow: inset 0 0 0 1px var(--primary-color);
+      background: color-mix(in srgb, var(--nova-accent) 14%, transparent);
+      border-color: var(--nova-accent);
+      box-shadow: inset 0 0 0 1px var(--nova-accent);
+    }
+
+    .layer-source-modal-option:disabled {
+      opacity: 0.5;
+      pointer-events: none;
     }
 
     .layer-source-modal-actions {
       display: flex;
       justify-content: flex-end;
-      margin-top: 10px;
+      margin-top: 16px;
     }
 
     .layer-source-modal-close {
       background: transparent;
-      border: 1px solid var(--divider-color);
-      border-radius: 6px;
-      color: var(--primary-text-color);
+      border: 1px solid var(--nova-divider);
+      border-radius: var(--nova-pill);
+      color: var(--nova-text);
       cursor: pointer;
       font: inherit;
-      padding: 6px 10px;
+      font-weight: 600;
+      min-height: 40px;
+      padding: 8px 20px;
     }
 
-    .layout-version {
-      bottom: 14px;
-      color: #9e9e9e;
-      font-size: 10px;
-      position: absolute;
-      right: 10px;
-    }
-
-    .layout-label {
-      fill: var(--primary-text-color);
-      font-size: 9px;
-      font-family: inherit;
-      pointer-events: none;
-    }
-
-    .layout-empty {
-      fill: #bdbdbd;
-      font-size: 14px;
-      font-family: inherit;
-      text-anchor: middle;
-      dominant-baseline: middle;
+    .layer-source-modal-close:hover {
+      border-color: var(--nova-accent);
     }
   `;
 
@@ -640,10 +931,9 @@ export class NovastarHSeriesCard extends LitElement {
             fill=${screenFill}
             stroke=${screenStroke}
             stroke-width="1"
-            style=${`fill:${screenFill};stroke:${screenStroke};stroke-width:1;`}
           ></rect>
           ${sortedLayers.length === 0
-            ? svg`<text class="layout-empty" x=${viewBoxWidth / 2} y=${viewBoxHeight / 2}>No layers detected</text>`
+            ? svg`<text class="layout-empty" x=${viewBoxWidth / 2} y=${viewBoxHeight / 2} text-anchor="middle" dominant-baseline="middle">No layers detected</text>`
             : nothing}
           ${sortedLayers.map((layer, index) => {
             const layerSourceRow = this.resolveLayerSourceRow(layerSourceRows, layer.id, index);
@@ -689,10 +979,10 @@ export class NovastarHSeriesCard extends LitElement {
             const isAudioOpen = layer.audioOpen === true;
             const isAudioMuted = layer.audioOpen === false;
             const audioColor = isAudioOpen
-              ? "#66bb6a"
+              ? "var(--success-color, #43a047)"
               : isAudioMuted
-                ? "#858585"
-                : "#bdbdbd";
+                ? "var(--secondary-text-color, #8a8a8a)"
+                : "color-mix(in srgb, var(--secondary-text-color, #8a8a8a) 55%, transparent)";
             const layerClickable = Boolean(layerSourceRow) && !powerFadeToBlack;
 
             return svg`
@@ -706,7 +996,6 @@ export class NovastarHSeriesCard extends LitElement {
                   fill=${layerFill}
                   stroke=${layerStroke}
                   stroke-width="3"
-                  style=${`fill:${layerFill};stroke:${layerStroke};stroke-width:3;`}
                 ></rect>
                 <g>
                   <rect
@@ -1464,18 +1753,19 @@ export class NovastarHSeriesCard extends LitElement {
     });
   }
 
-  private async handlePowerToggle(event: Event): Promise<void> {
+  private async handlePowerToggle(): Promise<void> {
     if (!this.hass) {
       return;
     }
 
     const powerEntityId = this.getEntityId("power_entity") ?? "switch.novastar_h2_power_screen_output";
-    if (!this.hass.states[powerEntityId]) {
+    const powerEntity = this.hass.states[powerEntityId];
+    if (!powerEntity) {
       return;
     }
 
-    const target = event.target as HTMLInputElement;
-    const isOn = target.checked;
+    const currentState = this.optimisticPowerState ?? powerEntity.state;
+    const isOn = currentState !== "on";
     this.optimisticPowerState = isOn ? "on" : "off";
     this.requestUpdate();
 
@@ -1490,25 +1780,20 @@ export class NovastarHSeriesCard extends LitElement {
     }
   }
 
-  private async handlePresetSelectionChanged(event: Event): Promise<void> {
+  private async handlePresetButtonClick(option: string): Promise<void> {
     if (!this.hass) {
       return;
     }
 
     const presetEntityId = this.getEntityId("preset_entity");
-    if (!presetEntityId) {
-      return;
-    }
-
-    const target = event.target as HTMLSelectElement;
-    const option = target.value?.trim();
-    if (!option) {
+    const nextOption = option.trim();
+    if (!presetEntityId || !nextOption) {
       return;
     }
 
     await this.hass.callService?.("select", "select_option", {
       entity_id: presetEntityId,
-      option
+      option: nextOption
     });
 
     this.reloadLayerSources();
@@ -1729,38 +2014,39 @@ class NovastarHSeriesCardEditor extends LitElement {
     const hasDevicePicker = Boolean(customElements.get("ha-device-picker"));
     const effectiveDeviceId = this.config.device_id?.trim() || this.localDeviceId || this.autoDetectedDeviceId || "";
     const selectedDeviceLabel = this.getSelectedDeviceLabel(effectiveDeviceId);
-    const layoutModeSelected = (this.config.display_mode ?? "full") === "layout";
-    const showTitleInLayout = this.config.show_title_in_layout === true;
+    const compactModeSelected = (this.config.display_mode ?? "standard") === "compact";
+    const showHeaderInCompact = this.config.show_header_in_compact === true;
 
     return html`
       <div class="editor">
         <ha-textfield
-          label="Title"
-          .value=${this.config.title ?? ""}
-          .configValue=${"title"}
+          label="Header"
+          .value=${this.config.header ?? ""}
+          .configValue=${"header"}
           @input=${this.handleInputChanged}
         ></ha-textfield>
         <label class="select-label" for="display-mode-select">Display mode</label>
         <select
           id="display-mode-select"
           class="editor-select"
-          .value=${this.config.display_mode ?? "full"}
+          .value=${this.config.display_mode ?? "standard"}
           .configValue=${"display_mode"}
           @change=${this.handleInputChanged}
         >
-          <option value="full">Full</option>
-          <option value="layout">Layout only</option>
+          <option value="detailed">Detailed</option>
+          <option value="standard">Standard</option>
+          <option value="compact">Compact</option>
         </select>
         <label class="checkbox-row">
           <input
             type="checkbox"
-            .checked=${showTitleInLayout}
-            .disabled=${!layoutModeSelected}
-            ?disabled=${!layoutModeSelected}
-            .configValue=${"show_title_in_layout"}
+            .checked=${showHeaderInCompact}
+            .disabled=${!compactModeSelected}
+            ?disabled=${!compactModeSelected}
+            .configValue=${"show_header_in_compact"}
             @change=${this.handleBooleanInputChanged}
           />
-          <span>Show title bar in layout mode</span>
+          <span>Show header in Compact mode</span>
         </label>
         ${hasDevicePicker
           ? html`
@@ -1905,7 +2191,7 @@ class NovastarHSeriesCardEditor extends LitElement {
     }
 
     const nextConfig: NovastarCardConfig = { ...this.config };
-    const normalizedValue = configValue === "display_mode" && nextValue === "full"
+    const normalizedValue = configValue === "display_mode" && nextValue === "standard"
       ? ""
       : nextValue;
 

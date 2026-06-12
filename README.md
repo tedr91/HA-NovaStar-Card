@@ -10,8 +10,12 @@ https://github.com/tedr91/HA-novastar-h
 
 ## Features
 
-- Displays a primary controller entity state.
-- Supports optional status, brightness, and temperature entities.
+- Polished, touch-friendly UI designed for wall-mounted control panels.
+- Theme-adaptive styling that follows your Home Assistant accent color and light/dark theme.
+- Three display modes: Detailed, Standard (default), and Compact.
+- Apple TV-style power button, tappable preset chips, and an inline brightness control.
+- Interactive screen layout preview with per-layer source selection.
+- Displays a primary controller entity state, with optional status, brightness, and temperature entities.
 - Includes a visual Lovelace card editor in the dashboard UI.
 - Ships as a single HACS-distributed frontend module.
 
@@ -38,8 +42,8 @@ type: module
 
 ```yaml
 type: custom:novastar-h-series-card
-title: Novastar H Series
-display_mode: full
+header: Novastar H Series
+display_mode: standard
 controller_entity: sensor.novastar_h_series_controller
 status_entity: sensor.novastar_h_series_status
 brightness_entity: sensor.novastar_h_series_brightness
@@ -48,21 +52,24 @@ temperature_entity: sensor.novastar_h_series_temperature
 
 `controller_entity` is required. All other fields are optional.
 
+`header` sets the title shown in the card header. Defaults to `Novastar H Series`.
+
 `display_mode` options:
-- `full` (default): full card with status/controls plus layout preview.
-- `layout`: layout-only output (screen layout and layer source interaction only).
+- `detailed`: full card with labeled status, temperature, brightness, and preset rows plus the layout preview.
+- `standard` (default): streamlined controls (power, brightness, presets) with the layout preview as the centerpiece.
+- `compact`: layout visualization only.
 
-`show_title_in_layout` options:
-- `false` (default): hide the title bar in layout mode.
-- `true`: show the title bar in layout mode.
+`show_header_in_compact` options:
+- `false` (default): hide the header in compact mode.
+- `true`: show the header (and power button) in compact mode.
 
-Layout-only example:
+Compact example:
 
 ```yaml
 type: custom:novastar-h-series-card
-title: Novastar Layout
-display_mode: layout
-show_title_in_layout: true
+header: Novastar Layout
+display_mode: compact
+show_header_in_compact: true
 device_id: YOUR_DEVICE_ID
 ```
 
