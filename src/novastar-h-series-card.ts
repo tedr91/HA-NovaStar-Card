@@ -605,7 +605,7 @@ export class NovastarHSeriesCard extends LitElement {
 
     .status-value {
       align-items: center;
-      border-radius: var(--nova-pill);
+      border-radius: var(--nova-radius-sm);
       display: inline-flex;
       font-size: 0.85rem;
       gap: 6px;
@@ -640,7 +640,7 @@ export class NovastarHSeriesCard extends LitElement {
       align-items: center;
       background: var(--nova-surface-2);
       border: 1px solid var(--nova-divider);
-      border-radius: var(--nova-pill);
+      border-radius: var(--nova-radius-sm);
       box-sizing: border-box;
       display: flex;
       flex: 1 1 auto;
@@ -737,7 +737,7 @@ export class NovastarHSeriesCard extends LitElement {
     .preset-chip {
       background: var(--nova-surface-2);
       border: 1px solid var(--nova-divider);
-      border-radius: var(--nova-pill);
+      border-radius: var(--nova-radius-sm);
       color: var(--nova-text);
       cursor: pointer;
       font: inherit;
@@ -912,7 +912,7 @@ export class NovastarHSeriesCard extends LitElement {
     .layer-source-modal-close {
       background: transparent;
       border: 1px solid var(--nova-divider);
-      border-radius: var(--nova-pill);
+      border-radius: var(--nova-radius-sm);
       color: var(--nova-text);
       cursor: pointer;
       font: inherit;
