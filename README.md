@@ -11,7 +11,7 @@ https://github.com/tedr91/HA-novastar-h
 ## Features
 
 - Polished, touch-friendly UI designed for wall-mounted control panels.
-- Theme-adaptive styling that follows your Home Assistant accent color and light/dark theme.
+- Two theme styles: a self-contained polished "nova" look (default) or follow your Home Assistant theme.
 - Three display modes: Detailed, Standard (default), and Compact.
 - Apple TV-style power button, tappable preset chips, and an inline brightness control.
 - Interactive screen layout preview with per-layer source selection.
@@ -44,6 +44,7 @@ type: module
 type: custom:novastar-h-series-card
 header: Novastar H Series
 display_mode: standard
+theme: nova
 controller_entity: sensor.novastar_h_series_controller
 status_entity: sensor.novastar_h_series_status
 brightness_entity: sensor.novastar_h_series_brightness
@@ -58,6 +59,10 @@ temperature_entity: sensor.novastar_h_series_temperature
 - `detailed`: full card with labeled status, temperature, brightness, and preset rows plus the layout preview.
 - `standard` (default): streamlined controls (power, brightness, presets) with the layout preview as the centerpiece.
 - `compact`: layout visualization only.
+
+`theme` options:
+- `nova` (default): self-contained, polished dark appearance that looks the same regardless of your Home Assistant theme.
+- `ha`: follow the active Home Assistant theme (accent color, surfaces, and corner radius).
 
 `show_header_in_compact` options:
 - `false` (default): hide the header in compact mode.

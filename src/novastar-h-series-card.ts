@@ -15,10 +15,13 @@ type HomeAssistant = {
 
 type DisplayMode = "detailed" | "standard" | "compact";
 
+type ThemeMode = "nova" | "ha";
+
 type NovastarCardConfig = {
   type: string;
   header?: string;
   display_mode?: DisplayMode;
+  theme?: ThemeMode;
   show_header_in_compact?: boolean;
   debug_layout?: boolean;
   device_id?: string;
@@ -228,6 +231,7 @@ export class NovastarHSeriesCard extends LitElement {
       : "";
 
     const displayMode = this.getDisplayMode();
+    const themeMode = this.getThemeMode();
     const isCompact = displayMode === "compact";
     const isDetailed = displayMode === "detailed";
     const showHeaderInCompact = this.config.show_header_in_compact === true;
@@ -239,7 +243,7 @@ export class NovastarHSeriesCard extends LitElement {
       .join(" ");
 
     return html`
-      <ha-card class="nova-card nova-card--${displayMode} ${powerIsOn ? "is-on" : "is-off"}">
+      <ha-card class="nova-card nova-card--${displayMode} nova-card--theme-${themeMode} ${powerIsOn ? "is-on" : "is-off"}">
         ${showHeader
           ? html`
               <div class="header-row">
@@ -340,6 +344,10 @@ export class NovastarHSeriesCard extends LitElement {
     return "standard";
   }
 
+  private getThemeMode(): ThemeMode {
+    return this.config?.theme === "ha" ? "ha" : "nova";
+  }
+
   private renderPowerButton(powerIsOn: boolean) {
     return html`
       <button
@@ -420,6 +428,26 @@ export class NovastarHSeriesCard extends LitElement {
 
   static styles = css`
     :host {
+      /* Nova design language — the default look (independent of the HA theme) */
+      --nova-accent: #3d8bfd;
+      --nova-on-accent: #ffffff;
+      --nova-text: #e8ecf3;
+      --nova-muted: #93a0b5;
+      --nova-divider: rgba(255, 255, 255, 0.12);
+      --nova-surface: #1c2130;
+      --nova-surface-2: #262c3c;
+      --nova-success: #41b85f;
+      --nova-screen: #0b0c10;
+      --nova-radius: 16px;
+      --nova-radius-sm: 14px;
+      --nova-pill: 999px;
+      --nova-gap: 14px;
+      --nova-touch: 44px;
+      display: block;
+    }
+
+    /* theme: ha — follow the Home Assistant theme instead */
+    .nova-card--theme-ha {
       --nova-accent: var(--primary-color, #2196f3);
       --nova-on-accent: var(--text-primary-color, #ffffff);
       --nova-text: var(--primary-text-color, #1c1c1c);
@@ -428,17 +456,20 @@ export class NovastarHSeriesCard extends LitElement {
       --nova-surface: var(--ha-card-background, var(--card-background-color, #ffffff));
       --nova-surface-2: color-mix(in srgb, var(--nova-surface) 84%, var(--nova-text) 16%);
       --nova-success: var(--success-color, #43a047);
-      --nova-screen: #0b0c10;
       --nova-radius: var(--ha-card-border-radius, 12px);
       --nova-radius-sm: min(var(--ha-card-border-radius, 12px), 14px);
-      --nova-pill: 999px;
-      --nova-gap: 14px;
-      --nova-touch: 44px;
-      display: block;
     }
 
     ha-card {
       overflow: hidden;
+    }
+
+    /* Nova mode paints its own card surface so it looks identical under any HA theme */
+    ha-card.nova-card--theme-nova {
+      background: var(--nova-surface);
+      border: 1px solid var(--nova-divider);
+      color: var(--nova-text);
+      --ha-card-border-radius: var(--nova-radius);
     }
 
     .header-row {
@@ -2047,6 +2078,17 @@ class NovastarHSeriesCardEditor extends LitElement {
           />
           <span>Show header in Compact mode</span>
         </label>
+        <label class="select-label" for="theme-select">Theme styling</label>
+        <select
+          id="theme-select"
+          class="editor-select"
+          .value=${this.config.theme ?? "nova"}
+          .configValue=${"theme"}
+          @change=${this.handleInputChanged}
+        >
+          <option value="nova">Nova (default)</option>
+          <option value="ha">Home Assistant theme</option>
+        </select>
         ${hasDevicePicker
           ? html`
               <ha-device-picker
@@ -2190,9 +2232,11 @@ class NovastarHSeriesCardEditor extends LitElement {
     }
 
     const nextConfig: NovastarCardConfig = { ...this.config };
-    const normalizedValue = configValue === "display_mode" && nextValue === "standard"
-      ? ""
-      : nextValue;
+    const normalizedValue =
+      (configValue === "display_mode" && nextValue === "standard")
+      || (configValue === "theme" && nextValue === "nova")
+        ? ""
+        : nextValue;
 
     if (normalizedValue) {
       (nextConfig[configValue] as string) = normalizedValue;
