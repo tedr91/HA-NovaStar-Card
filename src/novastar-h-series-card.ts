@@ -234,7 +234,6 @@ export class NovastarHSeriesCard extends LitElement {
     const themeMode = this.getThemeMode();
     const isCompact = displayMode === "compact";
     const isDetailed = displayMode === "detailed";
-    const isStandard = displayMode === "standard";
     const showHeaderInCompact = this.config.show_header_in_compact === true;
     const showHeader = !isCompact || showHeaderInCompact;
     const bareLayoutMode = isCompact && !showHeaderInCompact;
@@ -245,7 +244,7 @@ export class NovastarHSeriesCard extends LitElement {
 
     const showStatusDot = !isDetailed && Boolean(powerEntity);
     const showTempDot = !isDetailed && Boolean(temperatureEntity);
-    const showBrightnessButton = isStandard && showBrightnessSlider;
+    const showBrightnessButton = !isDetailed && showBrightnessSlider;
     const showStatusSection = showStatusDot || showTempDot || showBrightnessButton;
     const temperatureSeverity = this.getTemperatureSeverity(temperatureEntity?.state);
 
@@ -269,7 +268,7 @@ export class NovastarHSeriesCard extends LitElement {
                             : nothing}
                           ${showTempDot
                             ? html`<span
-                                class="status-dot status-dot--temp-${temperatureSeverity}"
+                                class="status-dot ${powerIsOn ? `status-dot--temp-${temperatureSeverity}` : "status-dot--off"}"
                                 title=${`Temperature: ${temperatureEntity?.state ?? ""}`}
                               ></span>`
                             : nothing}
