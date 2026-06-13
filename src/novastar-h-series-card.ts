@@ -111,6 +111,8 @@ export class NovastarHSeriesCard extends LitElement {
   private lastRelevantStateSignature = "";
   private activeLayerSourceChooser?: LayerSourceChooser;
   private presetChooserOpen = false;
+  private presetAnchorRect?: DOMRect;
+  private layerAnchorRect?: DOMRect;
 
   static properties = {
     hass: { attribute: false, noAccessor: true },
@@ -158,21 +160,51 @@ export class NovastarHSeriesCard extends LitElement {
   protected updated(): void {
     void this.ensureResolvedEntities();
     this.syncOptimisticPowerState();
-    this.syncModalDialogs();
+    this.syncChooserPopovers();
   }
 
-  private syncModalDialogs(): void {
+  private syncChooserPopovers(): void {
     const root = this.renderRoot as ShadowRoot;
 
-    const presetDialog = root.getElementById("nova-preset-dialog") as HTMLDialogElement | null;
-    if (presetDialog && this.presetChooserOpen && !presetDialog.open) {
-      presetDialog.showModal();
+    const presetPopover = root.getElementById("nova-preset-popover") as (HTMLElement & { showPopover?: () => void }) | null;
+    if (presetPopover && this.presetChooserOpen && !presetPopover.matches(":popover-open")) {
+      presetPopover.showPopover?.();
+      this.positionChooserPopover(presetPopover, this.presetAnchorRect);
     }
 
-    const layerDialog = root.getElementById("nova-layer-dialog") as HTMLDialogElement | null;
-    if (layerDialog && this.activeLayerSourceChooser && !layerDialog.open) {
-      layerDialog.showModal();
+    const layerPopover = root.getElementById("nova-layer-popover") as (HTMLElement & { showPopover?: () => void }) | null;
+    if (layerPopover && this.activeLayerSourceChooser && !layerPopover.matches(":popover-open")) {
+      layerPopover.showPopover?.();
+      this.positionChooserPopover(layerPopover, this.layerAnchorRect);
     }
+  }
+
+  private positionChooserPopover(popover: HTMLElement, anchor?: DOMRect): void {
+    const margin = 8;
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const rect = popover.getBoundingClientRect();
+
+    popover.style.position = "fixed";
+    popover.style.margin = "0";
+
+    if (!anchor) {
+      popover.style.left = `${Math.round((viewportWidth - rect.width) / 2)}px`;
+      popover.style.top = `${Math.round((viewportHeight - rect.height) / 2)}px`;
+      return;
+    }
+
+    let left = anchor.right - rect.width;
+    left = Math.max(margin, Math.min(left, viewportWidth - rect.width - margin));
+
+    let top = anchor.bottom + margin;
+    if (top + rect.height > viewportHeight - margin && anchor.top - margin - rect.height >= margin) {
+      top = anchor.top - margin - rect.height;
+    }
+    top = Math.max(margin, Math.min(top, viewportHeight - rect.height - margin));
+
+    popover.style.left = `${Math.round(left)}px`;
+    popover.style.top = `${Math.round(top)}px`;
   }
 
   protected render() {
@@ -642,39 +674,38 @@ export class NovastarHSeriesCard extends LitElement {
 
   private renderPresetChooser(options: string[], selected: string, disabled: boolean) {
     return html`
-      <dialog
-        id="nova-preset-dialog"
-        class="nova-dialog"
-        @cancel=${this.closePresetChooser}
-        @click=${this.handlePresetDialogClick}
+      <div
+        id="nova-preset-popover"
+        class="nova-popover"
+        popover
+        @toggle=${this.handlePresetPopoverToggle}
       >
-        <div class="nova-dialog-content">
-          <div class="nova-dialog-title">Select Preset</div>
-          <div class="nova-dialog-options">
-            ${options.map((option) => html`
-              <button
-                type="button"
-                class="nova-dialog-option ${this.optionEquals(option, selected) ? "selected" : ""}"
-                ?disabled=${disabled}
-                @click=${() => this.handlePresetChooserOptionClick(option)}
-              >${option}</button>
-            `)}
-          </div>
-          <div class="nova-dialog-actions">
-            <button type="button" class="nova-dialog-close" @click=${this.closePresetChooser}>Close</button>
-          </div>
+        <div class="nova-popover-title">Select Preset</div>
+        <div class="nova-popover-options">
+          ${options.map((option) => html`
+            <button
+              type="button"
+              class="nova-popover-option ${this.optionEquals(option, selected) ? "selected" : ""}"
+              ?disabled=${disabled}
+              @click=${() => this.handlePresetChooserOptionClick(option)}
+            >${option}</button>
+          `)}
         </div>
-      </dialog>
+      </div>
     `;
   }
 
-  private handlePresetDialogClick = (event: MouseEvent): void => {
-    if (event.target === event.currentTarget) {
-      this.closePresetChooser();
+  private handlePresetPopoverToggle = (event: Event): void => {
+    const toggleEvent = event as Event & { newState?: string };
+    if (toggleEvent.newState === "closed" && this.presetChooserOpen) {
+      this.presetChooserOpen = false;
+      this.requestUpdate();
     }
   };
 
-  private openPresetChooser = (): void => {
+  private openPresetChooser = (event: Event): void => {
+    const target = event.currentTarget as HTMLElement | null;
+    this.presetAnchorRect = target?.getBoundingClientRect();
     this.presetChooserOpen = true;
     this.requestUpdate();
   };
@@ -1314,43 +1345,39 @@ export class NovastarHSeriesCard extends LitElement {
       text-align: right;
     }
 
-    .nova-dialog {
+    .nova-popover {
       background: var(--nova-surface);
       border: 1px solid var(--nova-divider);
-      border-radius: var(--nova-radius);
-      box-shadow: 0 18px 48px rgba(0, 0, 0, 0.45);
+      border-radius: var(--nova-radius-sm);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
       box-sizing: border-box;
-      color: var(--nova-text);
-      max-width: min(440px, 92vw);
-      padding: 0;
-      width: 100%;
+      inset: auto;
+      margin: 0;
+      max-width: min(300px, 92vw);
+      min-width: 200px;
+      padding: 8px;
+      position: fixed;
     }
 
-    .nova-dialog::backdrop {
-      background: rgba(0, 0, 0, 0.55);
-      -webkit-backdrop-filter: blur(2px);
-      backdrop-filter: blur(2px);
+    .nova-popover::backdrop {
+      background: transparent;
     }
 
-    .nova-dialog-content {
-      box-sizing: border-box;
-      padding: 18px;
-    }
-
-    .nova-dialog-title {
-      font-size: 1.05rem;
+    .nova-popover-title {
+      color: var(--nova-muted);
+      font-size: 0.8rem;
       font-weight: 600;
-      margin-bottom: 14px;
+      padding: 4px 8px 8px;
     }
 
-    .nova-dialog-options {
+    .nova-popover-options {
       display: grid;
-      gap: 10px;
-      max-height: min(60vh, 360px);
+      gap: 6px;
+      max-height: min(50vh, 320px);
       overflow: auto;
     }
 
-    .nova-dialog-option {
+    .nova-popover-option {
       align-items: center;
       background: var(--nova-surface-2);
       border: 1px solid var(--nova-divider);
@@ -1359,50 +1386,28 @@ export class NovastarHSeriesCard extends LitElement {
       cursor: pointer;
       display: flex;
       font: inherit;
-      font-size: 0.98rem;
+      font-size: 0.95rem;
       font-weight: 500;
-      min-height: var(--nova-touch);
-      padding: 10px 16px;
+      min-height: 40px;
+      padding: 8px 14px;
       text-align: left;
       transition: background 0.18s ease, border-color 0.18s ease;
       width: 100%;
     }
 
-    .nova-dialog-option:hover {
+    .nova-popover-option:hover {
       border-color: color-mix(in srgb, var(--nova-accent) 45%, var(--nova-divider));
     }
 
-    .nova-dialog-option.selected {
+    .nova-popover-option.selected {
       background: color-mix(in srgb, var(--nova-accent) 14%, transparent);
       border-color: var(--nova-accent);
       box-shadow: inset 0 0 0 1px var(--nova-accent);
     }
 
-    .nova-dialog-option:disabled {
+    .nova-popover-option:disabled {
       opacity: 0.5;
       pointer-events: none;
-    }
-
-    .nova-dialog-actions {
-      display: flex;
-      justify-content: flex-end;
-      margin-top: 16px;
-    }
-
-    .nova-dialog-close {
-      background: transparent;
-      border: 1px solid var(--nova-divider);
-      border-radius: var(--nova-radius-sm);
-      color: var(--nova-text);
-      cursor: pointer;
-      font: inherit;
-      font-weight: 600;
-      min-height: 40px;
-      padding: 8px 20px;
-    }
-
-    .nova-dialog-close:hover {
-      border-color: var(--nova-accent);
     }
   `;
 
@@ -1568,7 +1573,7 @@ export class NovastarHSeriesCard extends LitElement {
                   ry=${badgeRadius}
                   fill="#111111"
                   fill-opacity="0.82"
-                  @click=${layerClickable ? () => this.openLayerSourceChooser(layerSourceRow) : nothing}
+                  @click=${layerClickable ? (event: Event) => this.openLayerSourceChooser(layerSourceRow, event) : nothing}
                 ></rect>
                 <text
                   class=${layerClickable ? "layout-layer-hitbox" : ""}
@@ -1578,7 +1583,7 @@ export class NovastarHSeriesCard extends LitElement {
                   style=${`fill:${labelFill};font-size:${labelFontSize}px;font-family:inherit;`}
                   text-anchor="middle"
                   dominant-baseline="middle"
-                  @click=${layerClickable ? () => this.openLayerSourceChooser(layerSourceRow) : nothing}
+                  @click=${layerClickable ? (event: Event) => this.openLayerSourceChooser(layerSourceRow, event) : nothing}
                 >${visibleLabel}</text>
               </g>
             `;
@@ -1657,37 +1662,41 @@ export class NovastarHSeriesCard extends LitElement {
     }
 
     return html`
-      <dialog
-        id="nova-layer-dialog"
-        class="nova-dialog"
-        @cancel=${this.closeLayerSourceChooser}
-        @click=${this.handleLayerDialogClick}
+      <div
+        id="nova-layer-popover"
+        class="nova-popover"
+        popover
+        @toggle=${this.handleLayerPopoverToggle}
       >
-        <div class="nova-dialog-content">
-          <div class="nova-dialog-title">Layer ${chooser.layerNumber} Source</div>
-          <div class="nova-dialog-options">
-            ${chooser.options.map((option) => html`
-              <button
-                type="button"
-                class="nova-dialog-option ${this.optionEquals(option, chooser.selectedOption) ? "selected" : ""}"
-                ?disabled=${powerFadeToBlack}
-                @click=${() => this.handleLayerSourceModalOptionClick(option)}
-              >${option}</button>
-            `)}
-          </div>
-          <div class="nova-dialog-actions">
-            <button type="button" class="nova-dialog-close" @click=${this.closeLayerSourceChooser}>Close</button>
-          </div>
+        <div class="nova-popover-title">Layer ${chooser.layerNumber} Source</div>
+        <div class="nova-popover-options">
+          ${chooser.options.map((option) => html`
+            <button
+              type="button"
+              class="nova-popover-option ${this.optionEquals(option, chooser.selectedOption) ? "selected" : ""}"
+              ?disabled=${powerFadeToBlack}
+              @click=${() => this.handleLayerSourceModalOptionClick(option)}
+            >${option}</button>
+          `)}
         </div>
-      </dialog>
+      </div>
     `;
   }
 
-  private openLayerSourceChooser(row: LayerSourceRow | undefined): void {
+  private handleLayerPopoverToggle = (event: Event): void => {
+    const toggleEvent = event as Event & { newState?: string };
+    if (toggleEvent.newState === "closed" && this.activeLayerSourceChooser) {
+      this.closeLayerSourceChooser();
+    }
+  };
+
+  private openLayerSourceChooser(row: LayerSourceRow | undefined, event?: Event): void {
     if (!row) {
       return;
     }
 
+    const target = event?.currentTarget as Element | null;
+    this.layerAnchorRect = target?.getBoundingClientRect();
     this.activeLayerSourceChooser = {
       entityId: row.entityId,
       layerNumber: row.layerNumber,
@@ -1700,12 +1709,6 @@ export class NovastarHSeriesCard extends LitElement {
   private closeLayerSourceChooser = (): void => {
     this.activeLayerSourceChooser = undefined;
     this.requestUpdate();
-  };
-
-  private handleLayerDialogClick = (event: MouseEvent): void => {
-    if (event.target === event.currentTarget) {
-      this.closeLayerSourceChooser();
-    }
   };
 
   private async handleLayerSourceModalOptionClick(option: string): Promise<void> {
