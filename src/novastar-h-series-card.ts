@@ -2612,7 +2612,7 @@ export class NovastarHSeriesCard extends LitElement {
 }
 
 const NOVASTAR_EDITOR_FIELD_LABELS: Record<string, string> = {
-  header: "Header",
+  header: "Name",
   display_mode: "Display mode",
   theme: "Theme styling",
   show_header_in_compact: "Show header in Compact mode",
@@ -2701,6 +2701,10 @@ class NovastarHSeriesCardEditor extends LitElement {
     const schema: Array<Record<string, unknown>> = [
       { name: "header", selector: { text: { placeholder: "Novastar H Series" } } },
       {
+        name: "device_id",
+        selector: { device: { filter: { integration: "novastar_h" } } }
+      },
+      {
         name: "display_mode",
         required: true,
         selector: {
@@ -2757,11 +2761,6 @@ class NovastarHSeriesCardEditor extends LitElement {
         }
       });
     }
-
-    schema.push({
-      name: "device_id",
-      selector: { device: { filter: { integration: "novastar_h" } } }
-    });
 
     schema.push({
       name: "",
