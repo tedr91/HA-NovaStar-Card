@@ -1349,6 +1349,17 @@ export class NovastarHSeriesCard extends LitElement {
       font-size: 14px;
     }
 
+    .layout-layers--off {
+      opacity: 0.3;
+    }
+
+    .layout-off-label {
+      fill: color-mix(in srgb, #ffffff 80%, transparent);
+      font-family: inherit;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+
     .version-footer {
       color: var(--nova-muted);
       font-size: 0.72rem;
@@ -1439,6 +1450,7 @@ export class NovastarHSeriesCard extends LitElement {
     const powerEntity = this.hass?.states[powerEntityId];
     const powerState = this.optimisticPowerState ?? powerEntity?.state;
     const powerFadeToBlack = Boolean(powerEntity) && powerState !== "on";
+    const offFontSize = Math.max(40, Math.min(viewBoxHeight * 0.14, viewBoxWidth * 0.1));
 
     return html`
       <div class=${compactMode ? "layout-preview layout-preview--compact" : "layout-preview"}>
@@ -1459,147 +1471,189 @@ export class NovastarHSeriesCard extends LitElement {
             stroke=${screenStroke}
             stroke-width="1"
           ></rect>
-          ${sortedLayers.length === 0
+          ${!powerFadeToBlack && sortedLayers.length === 0
             ? svg`<text class="layout-empty" x=${viewBoxWidth / 2} y=${viewBoxHeight / 2} text-anchor="middle" dominant-baseline="middle">No layers detected</text>`
             : nothing}
-          ${sortedLayers.map((layer, index) => {
-            const layerSourceRow = this.resolveLayerSourceRow(layerSourceRows, layer.id, index);
-            const label = this.resolveLayerSourceLabel(layerSourceLabels, layer.id, index)
-              ?? layer.source?.trim()
-              ?? layer.id;
-            const labelX = layer.x + (layer.width / 2);
-            const labelY = layer.y + (layer.height / 2);
-            const minLayerDimension = Math.min(layer.width, layer.height);
-            const viewportMinFont = Math.max(54, viewBoxWidth * 0.017);
-            const preferredFont = Math.max(minLayerDimension * 0.14, viewportMinFont);
-            const maxFontByHeight = Math.max(24, layer.height * 0.38);
-            const labelFontSize = Math.min(preferredFont, maxFontByHeight);
-            const horizontalPadding = Math.max(18, labelFontSize * 0.35);
-            const maxLabelWidth = Math.max(32, layer.width * 0.9);
-            const maxChars = Math.max(1, Math.floor((maxLabelWidth - (horizontalPadding * 2)) / Math.max(1, labelFontSize * 0.62)));
-            const visibleLabel = label.length <= maxChars
-              ? label
-              : `${label.slice(0, Math.max(1, maxChars - 1))}…`;
-            const estimatedTextWidth = visibleLabel.length * labelFontSize * 0.62;
-            const badgeWidth = Math.min(maxLabelWidth, estimatedTextWidth + (horizontalPadding * 2));
-            const badgeHeight = Math.max(28, labelFontSize * 1.35);
-            const badgeX = labelX - (badgeWidth / 2);
-            const badgeY = labelY - (badgeHeight / 2);
-            const badgeRadius = Math.max(6, badgeHeight * 0.25);
+          <g class=${powerFadeToBlack ? "layout-layers layout-layers--off" : "layout-layers"}>
+            ${sortedLayers.map((layer, index) => {
+              const layerSourceRow = this.resolveLayerSourceRow(layerSourceRows, layer.id, index);
+              const label = this.resolveLayerSourceLabel(layerSourceLabels, layer.id, index)
+                ?? layer.source?.trim()
+                ?? layer.id;
+              const labelX = layer.x + (layer.width / 2);
+              const labelY = layer.y + (layer.height / 2);
+              const minLayerDimension = Math.min(layer.width, layer.height);
+              const viewportMinFont = Math.max(54, viewBoxWidth * 0.017);
+              const preferredFont = Math.max(minLayerDimension * 0.14, viewportMinFont);
+              const maxFontByHeight = Math.max(24, layer.height * 0.38);
+              const labelFontSize = Math.min(preferredFont, maxFontByHeight);
+              const horizontalPadding = Math.max(18, labelFontSize * 0.35);
+              const maxLabelWidth = Math.max(32, layer.width * 0.9);
 
-            const audioIconSize = Math.max(51, Math.min(138, minLayerDimension * 0.27));
-            const audioIconPadding = Math.max(10, audioIconSize * 0.22);
-            const audioIconX = Math.max(layer.x + 4, layer.x + layer.width - audioIconSize - audioIconPadding);
-            const audioIconY = Math.min(layer.y + audioIconPadding, layer.y + layer.height - audioIconSize - 4);
-            const speakerBodyX = audioIconX + (audioIconSize * 0.22);
-            const speakerBodyY = audioIconY + (audioIconSize * 0.34);
-            const speakerBodyWidth = audioIconSize * 0.18;
-            const speakerBodyHeight = audioIconSize * 0.32;
-            const speakerConePoints = [
-              `${speakerBodyX + speakerBodyWidth},${audioIconY + (audioIconSize * 0.26)}`,
-              `${audioIconX + (audioIconSize * 0.68)},${audioIconY + (audioIconSize * 0.16)}`,
-              `${audioIconX + (audioIconSize * 0.68)},${audioIconY + (audioIconSize * 0.84)}`,
-              `${speakerBodyX + speakerBodyWidth},${audioIconY + (audioIconSize * 0.74)}`
-            ].join(" ");
-            const waveBaseX = audioIconX + (audioIconSize * 0.7);
-            const waveCenterY = audioIconY + (audioIconSize * 0.5);
-            const isAudioOpen = layer.audioOpen === true;
-            const isAudioMuted = layer.audioOpen === false;
-            const audioColor = isAudioOpen
-              ? "var(--success-color, #43a047)"
-              : isAudioMuted
-                ? "var(--secondary-text-color, #8a8a8a)"
-                : "color-mix(in srgb, var(--secondary-text-color, #8a8a8a) 55%, transparent)";
-            const layerClickable = Boolean(layerSourceRow) && !powerFadeToBlack;
+              const sourceIconSize = labelFontSize * 1.05;
+              const sourceIconGap = labelFontSize * 0.32;
+              const sourceIconSlot = sourceIconSize + sourceIconGap;
+              const textBudget = maxLabelWidth - (horizontalPadding * 2);
+              const showSourceIcon = (textBudget - sourceIconSlot) >= (labelFontSize * 0.62 * 2);
+              const charBudget = showSourceIcon ? textBudget - sourceIconSlot : textBudget;
+              const maxChars = Math.max(1, Math.floor(charBudget / Math.max(1, labelFontSize * 0.62)));
+              const visibleLabel = label.length <= maxChars
+                ? label
+                : `${label.slice(0, Math.max(1, maxChars - 1))}…`;
+              const estimatedTextWidth = visibleLabel.length * labelFontSize * 0.62;
+              const contentWidth = (showSourceIcon ? sourceIconSlot : 0) + estimatedTextWidth;
+              const badgeWidth = Math.min(maxLabelWidth, contentWidth + (horizontalPadding * 2));
+              const badgeHeight = Math.max(28, labelFontSize * 1.35);
+              const badgeX = labelX - (badgeWidth / 2);
+              const badgeY = labelY - (badgeHeight / 2);
+              const badgeRadius = Math.max(6, badgeHeight * 0.25);
+              const contentStartX = badgeX + horizontalPadding;
+              const sourceIconX = contentStartX;
+              const sourceIconY = labelY - (sourceIconSize / 2);
+              const sourceIconScale = sourceIconSize / 24;
+              const textX = showSourceIcon ? contentStartX + sourceIconSlot : labelX;
+              const textAnchor = showSourceIcon ? "start" : "middle";
 
-            return svg`
-              <g>
-                <rect
-                  class="layout-layer"
-                  x=${layer.x}
-                  y=${layer.y}
-                  width=${layer.width}
-                  height=${layer.height}
-                  fill=${layerFill}
-                  stroke=${layerStroke}
-                  stroke-width="3"
-                ></rect>
+              const audioIconSize = Math.max(51, Math.min(138, minLayerDimension * 0.27));
+              const audioIconPadding = Math.max(10, audioIconSize * 0.22);
+              const audioIconX = Math.max(layer.x + 4, layer.x + layer.width - audioIconSize - audioIconPadding);
+              const audioIconY = Math.min(layer.y + audioIconPadding, layer.y + layer.height - audioIconSize - 4);
+              const speakerBodyX = audioIconX + (audioIconSize * 0.22);
+              const speakerBodyY = audioIconY + (audioIconSize * 0.34);
+              const speakerBodyWidth = audioIconSize * 0.18;
+              const speakerBodyHeight = audioIconSize * 0.32;
+              const speakerConePoints = [
+                `${speakerBodyX + speakerBodyWidth},${audioIconY + (audioIconSize * 0.26)}`,
+                `${audioIconX + (audioIconSize * 0.68)},${audioIconY + (audioIconSize * 0.16)}`,
+                `${audioIconX + (audioIconSize * 0.68)},${audioIconY + (audioIconSize * 0.84)}`,
+                `${speakerBodyX + speakerBodyWidth},${audioIconY + (audioIconSize * 0.74)}`
+              ].join(" ");
+              const waveBaseX = audioIconX + (audioIconSize * 0.7);
+              const waveCenterY = audioIconY + (audioIconSize * 0.5);
+              const isAudioOpen = layer.audioOpen === true;
+              const isAudioMuted = layer.audioOpen === false;
+              const audioColor = isAudioOpen
+                ? "var(--success-color, #43a047)"
+                : isAudioMuted
+                  ? "var(--secondary-text-color, #8a8a8a)"
+                  : "color-mix(in srgb, var(--secondary-text-color, #8a8a8a) 55%, transparent)";
+              const layerClickable = Boolean(layerSourceRow) && !powerFadeToBlack;
+
+              return svg`
                 <g>
                   <rect
-                    x=${audioIconX}
-                    y=${audioIconY}
-                    width=${audioIconSize}
-                    height=${audioIconSize}
-                    rx=${audioIconSize * 0.22}
-                    ry=${audioIconSize * 0.22}
-                    fill="#111111"
-                    fill-opacity="0.8"
+                    class="layout-layer"
+                    x=${layer.x}
+                    y=${layer.y}
+                    width=${layer.width}
+                    height=${layer.height}
+                    fill=${layerFill}
+                    stroke=${layerStroke}
+                    stroke-width="3"
                   ></rect>
-                  <rect
-                    x=${speakerBodyX}
-                    y=${speakerBodyY}
-                    width=${speakerBodyWidth}
-                    height=${speakerBodyHeight}
-                    fill=${audioColor}
-                  ></rect>
-                  <polygon points=${speakerConePoints} fill=${audioColor}></polygon>
-                  ${isAudioOpen
-                    ? svg`
-                      <path
-                        d=${`M ${waveBaseX} ${waveCenterY - (audioIconSize * 0.13)} Q ${waveBaseX + (audioIconSize * 0.12)} ${waveCenterY} ${waveBaseX} ${waveCenterY + (audioIconSize * 0.13)}`}
-                        fill="none"
-                        stroke=${audioColor}
-                        stroke-width=${audioIconSize * 0.06}
-                        stroke-linecap="round"
-                      ></path>
-                      <path
-                        d=${`M ${waveBaseX + (audioIconSize * 0.1)} ${waveCenterY - (audioIconSize * 0.22)} Q ${waveBaseX + (audioIconSize * 0.28)} ${waveCenterY} ${waveBaseX + (audioIconSize * 0.1)} ${waveCenterY + (audioIconSize * 0.22)}`}
-                        fill="none"
-                        stroke=${audioColor}
-                        stroke-width=${audioIconSize * 0.06}
-                        stroke-linecap="round"
-                      ></path>
-                    `
-                    : nothing}
-                  ${isAudioMuted
-                    ? svg`
-                      <line
-                        x1=${audioIconX + (audioIconSize * 0.7)}
-                        y1=${audioIconY + (audioIconSize * 0.24)}
-                        x2=${audioIconX + (audioIconSize * 0.92)}
-                        y2=${audioIconY + (audioIconSize * 0.76)}
-                        stroke=${audioColor}
-                        stroke-width=${audioIconSize * 0.08}
-                        stroke-linecap="round"
-                      ></line>
-                    `
-                    : nothing}
+                  ${powerFadeToBlack
+                    ? nothing
+                    : svg`
+                      <g>
+                        <rect
+                          x=${audioIconX}
+                          y=${audioIconY}
+                          width=${audioIconSize}
+                          height=${audioIconSize}
+                          rx=${audioIconSize * 0.22}
+                          ry=${audioIconSize * 0.22}
+                          fill="#111111"
+                          fill-opacity="0.8"
+                        ></rect>
+                        <rect
+                          x=${speakerBodyX}
+                          y=${speakerBodyY}
+                          width=${speakerBodyWidth}
+                          height=${speakerBodyHeight}
+                          fill=${audioColor}
+                        ></rect>
+                        <polygon points=${speakerConePoints} fill=${audioColor}></polygon>
+                        ${isAudioOpen
+                          ? svg`
+                            <path
+                              d=${`M ${waveBaseX} ${waveCenterY - (audioIconSize * 0.13)} Q ${waveBaseX + (audioIconSize * 0.12)} ${waveCenterY} ${waveBaseX} ${waveCenterY + (audioIconSize * 0.13)}`}
+                              fill="none"
+                              stroke=${audioColor}
+                              stroke-width=${audioIconSize * 0.06}
+                              stroke-linecap="round"
+                            ></path>
+                            <path
+                              d=${`M ${waveBaseX + (audioIconSize * 0.1)} ${waveCenterY - (audioIconSize * 0.22)} Q ${waveBaseX + (audioIconSize * 0.28)} ${waveCenterY} ${waveBaseX + (audioIconSize * 0.1)} ${waveCenterY + (audioIconSize * 0.22)}`}
+                              fill="none"
+                              stroke=${audioColor}
+                              stroke-width=${audioIconSize * 0.06}
+                              stroke-linecap="round"
+                            ></path>
+                          `
+                          : nothing}
+                        ${isAudioMuted
+                          ? svg`
+                            <line
+                              x1=${audioIconX + (audioIconSize * 0.7)}
+                              y1=${audioIconY + (audioIconSize * 0.24)}
+                              x2=${audioIconX + (audioIconSize * 0.92)}
+                              y2=${audioIconY + (audioIconSize * 0.76)}
+                              stroke=${audioColor}
+                              stroke-width=${audioIconSize * 0.08}
+                              stroke-linecap="round"
+                            ></line>
+                          `
+                          : nothing}
+                      </g>
+                      <rect
+                        class=${layerClickable ? "layout-layer-hitbox" : ""}
+                        x=${badgeX}
+                        y=${badgeY}
+                        width=${badgeWidth}
+                        height=${badgeHeight}
+                        rx=${badgeRadius}
+                        ry=${badgeRadius}
+                        fill="#111111"
+                        fill-opacity="0.82"
+                        @click=${layerClickable ? (event: Event) => this.openLayerSourceChooser(layerSourceRow, event) : nothing}
+                      ></rect>
+                      ${showSourceIcon
+                        ? svg`
+                          <g
+                            class=${layerClickable ? "layout-layer-hitbox" : ""}
+                            transform=${`translate(${sourceIconX} ${sourceIconY}) scale(${sourceIconScale})`}
+                            @click=${layerClickable ? (event: Event) => this.openLayerSourceChooser(layerSourceRow, event) : nothing}
+                          >
+                            <path d="M2 10 H11 V7 L16 12 L11 17 V14 H2 Z" fill=${labelFill}></path>
+                            <rect x="18.4" y="6" width="2.6" height="12" rx="1" ry="1" fill=${labelFill}></rect>
+                          </g>
+                        `
+                        : nothing}
+                      <text
+                        class=${layerClickable ? "layout-layer-hitbox" : ""}
+                        x=${textX}
+                        y=${labelY}
+                        font-weight="700"
+                        style=${`fill:${labelFill};font-size:${labelFontSize}px;font-family:inherit;`}
+                        text-anchor=${textAnchor}
+                        dominant-baseline="middle"
+                        @click=${layerClickable ? (event: Event) => this.openLayerSourceChooser(layerSourceRow, event) : nothing}
+                      >${visibleLabel}</text>
+                    `}
                 </g>
-                <rect
-                  class=${layerClickable ? "layout-layer-hitbox" : ""}
-                  x=${badgeX}
-                  y=${badgeY}
-                  width=${badgeWidth}
-                  height=${badgeHeight}
-                  rx=${badgeRadius}
-                  ry=${badgeRadius}
-                  fill="#111111"
-                  fill-opacity="0.82"
-                  @click=${layerClickable ? (event: Event) => this.openLayerSourceChooser(layerSourceRow, event) : nothing}
-                ></rect>
-                <text
-                  class=${layerClickable ? "layout-layer-hitbox" : ""}
-                  x=${labelX}
-                  y=${labelY}
-                  font-weight="700"
-                  style=${`fill:${labelFill};font-size:${labelFontSize}px;font-family:inherit;`}
-                  text-anchor="middle"
-                  dominant-baseline="middle"
-                  @click=${layerClickable ? (event: Event) => this.openLayerSourceChooser(layerSourceRow, event) : nothing}
-                >${visibleLabel}</text>
-              </g>
-            `;
-          })}
+              `;
+            })}
+          </g>
+          ${powerFadeToBlack
+            ? svg`<text
+                class="layout-off-label"
+                x=${viewBoxWidth / 2}
+                y=${viewBoxHeight / 2}
+                text-anchor="middle"
+                dominant-baseline="middle"
+                style=${`font-size:${offFontSize}px;`}
+              >Screen Off</text>`
+            : nothing}
         </svg>
         ${this.activeLayerSourceChooser
           ? this.renderLayerSourceChooser(powerFadeToBlack)
