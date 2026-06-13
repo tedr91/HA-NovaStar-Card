@@ -23,6 +23,9 @@ type NovastarCardConfig = {
   display_mode?: DisplayMode;
   theme?: ThemeMode;
   show_header_in_compact?: boolean;
+  show_card_version?: boolean;
+  preset_order?: string[];
+  preset_baseline?: string[];
   screen_color?: string;
   screen_background_color?: string;
   debug_layout?: boolean;
@@ -269,6 +272,7 @@ export class NovastarHSeriesCard extends LitElement {
       ? this.readStringAttribute(brightnessEntity, "unit_of_measurement") ?? ""
       : "";
     const presetOptions = this.readStringListAttribute(presetEntity, "options");
+    const visiblePresets = this.arrangePresets(presetOptions);
     const selectedPresetOption = presetEntity
       ? this.resolveSelectedOption(presetEntity, presetOptions)
       : "";
@@ -379,17 +383,24 @@ export class NovastarHSeriesCard extends LitElement {
               `
             : nothing}
           ${!isCompact && presetEntity
-            ? this.renderPresetArea(presetOptions, selectedPresetOption, powerFadeToBlack, isDetailed, presetEntity)
+            ? this.renderPresetArea(visiblePresets, selectedPresetOption, powerFadeToBlack, isDetailed, presetEntity)
             : nothing}
           ${layoutPayload
-            ? this.renderLayoutPreview(layoutPayload, bareLayoutMode)
+            ? isDetailed
+              ? html`
+                  <div class="layout-area">
+                    <div class="preset-heading">Layout and Inputs</div>
+                    ${this.renderLayoutPreview(layoutPayload, bareLayoutMode)}
+                  </div>
+                `
+              : this.renderLayoutPreview(layoutPayload, bareLayoutMode)
             : isCompact
               ? html`<div class="row"><span class="label">Layout</span><span class="value">Unavailable</span></div>`
               : nothing}
-          ${isDetailed ? this.renderVersionFooter() : nothing}
+          ${isDetailed && this.config.show_card_version === true ? this.renderVersionFooter() : nothing}
         </div>
-        ${this.presetChooserOpen && presetEntity && presetOptions.length > 0
-          ? this.renderPresetChooser(presetOptions, selectedPresetOption, powerFadeToBlack)
+        ${this.presetChooserOpen && presetEntity && visiblePresets.length > 0
+          ? this.renderPresetChooser(visiblePresets, selectedPresetOption, powerFadeToBlack)
           : nothing}
       </ha-card>
     `;
@@ -630,7 +641,8 @@ export class NovastarHSeriesCard extends LitElement {
       `;
     }
 
-    const visibleOptions = isDetailed ? options : options.slice(0, 4);
+    const showMore = !isDetailed && options.length > 5;
+    const visibleOptions = isDetailed || !showMore ? options : options.slice(0, 4);
 
     return html`
       <div class="preset-area">
@@ -649,7 +661,7 @@ export class NovastarHSeriesCard extends LitElement {
               ><span class="preset-button-label">${option}</span></button>
             `;
           })}
-          ${!isDetailed
+          ${showMore
             ? html`
                 <button
                   type="button"
@@ -1106,7 +1118,8 @@ export class NovastarHSeriesCard extends LitElement {
       align-items: center;
     }
 
-    .preset-area {
+    .preset-area,
+    .layout-area {
       display: flex;
       flex-direction: column;
       gap: 8px;
@@ -1175,7 +1188,6 @@ export class NovastarHSeriesCard extends LitElement {
     .preset-button--more {
       align-items: center;
       color: var(--nova-muted);
-      grid-column: 5;
       justify-content: center;
     }
 
@@ -1835,6 +1847,43 @@ export class NovastarHSeriesCard extends LitElement {
     return normalizedLeft === normalizedRight;
   }
 
+  private sortedEqual(left: string[], right: string[]): boolean {
+    if (left.length !== right.length) {
+      return false;
+    }
+
+    const normalize = (list: string[]): string[] =>
+      list.map((item) => item.trim().toLowerCase()).sort();
+    const normalizedLeft = normalize(left);
+    const normalizedRight = normalize(right);
+    return normalizedLeft.every((value, index) => value === normalizedRight[index]);
+  }
+
+  private arrangePresets(options: string[]): string[] {
+    const order = this.config?.preset_order;
+    if (!Array.isArray(order) || order.length === 0) {
+      return options;
+    }
+
+    const baseline = this.config?.preset_baseline;
+    if (Array.isArray(baseline) && baseline.length > 0 && !this.sortedEqual(baseline, options)) {
+      // The device's set of presets changed since this order was saved — fall back to defaults.
+      return options;
+    }
+
+    const arranged: string[] = [];
+    const used = new Set<string>();
+    for (const name of order) {
+      const match = options.find((option) => !used.has(option) && this.optionEquals(option, name));
+      if (match) {
+        arranged.push(match);
+        used.add(match);
+      }
+    }
+
+    return arranged.length > 0 ? arranged : options;
+  }
+
   private readLayoutPayload(
     screensEntity: HassEntity | undefined,
     layersEntity: HassEntity | undefined
@@ -2485,6 +2534,8 @@ const NOVASTAR_EDITOR_FIELD_LABELS: Record<string, string> = {
   display_mode: "Display mode",
   theme: "Theme styling",
   show_header_in_compact: "Show header in Compact mode",
+  show_card_version: "Show card version",
+  preset_order: "Preset order",
   screen_color: "Screen color",
   screen_background_color: "Screen background color",
   device_id: "Device",
@@ -2505,6 +2556,11 @@ class NovastarHSeriesCardEditor extends LitElement {
     type: "custom:novastar-h-series-card"
   };
   private attemptedAutoDeviceDefault = false;
+  private presetOptions: string[] = [];
+  private presetOptionsKey?: string;
+  private resolvedPresetEntityId?: string;
+  private resolvingPresetKey?: string;
+  private presetsResetNotice = false;
 
   static properties = {
     hass: { attribute: false },
@@ -2520,6 +2576,8 @@ class NovastarHSeriesCardEditor extends LitElement {
 
   protected updated(): void {
     void this.ensureDefaultDeviceId();
+    void this.ensurePresetOptions();
+    this.maybeResetStalePresetOrder();
   }
 
   protected render() {
@@ -2539,6 +2597,7 @@ class NovastarHSeriesCardEditor extends LitElement {
         .data=${data}
         .schema=${this.buildSchema()}
         .computeLabel=${this.computeLabel}
+        .computeHelper=${this.computeHelper}
         @value-changed=${this.handleValueChanged}
       ></ha-form>
     `;
@@ -2600,6 +2659,23 @@ class NovastarHSeriesCardEditor extends LitElement {
       schema.push({ name: "show_header_in_compact", selector: { boolean: {} } });
     }
 
+    if (displayMode === "detailed") {
+      schema.push({ name: "show_card_version", selector: { boolean: {} } });
+    }
+
+    if (this.presetOptions.length > 0) {
+      schema.push({
+        name: "preset_order",
+        selector: {
+          select: {
+            multiple: true,
+            reorder: true,
+            options: this.presetOptions.map((preset) => ({ value: preset, label: preset }))
+          }
+        }
+      });
+    }
+
     schema.push({
       name: "device_id",
       selector: { device: { filter: { integration: "novastar_h" } } }
@@ -2630,6 +2706,21 @@ class NovastarHSeriesCardEditor extends LitElement {
     return NOVASTAR_EDITOR_FIELD_LABELS[schema.name] ?? schema.name;
   };
 
+  private computeHelper = (schema: { name: string }): string => {
+    if (schema.name !== "preset_order") {
+      return "";
+    }
+
+    if (this.presetOptions.length === 0) {
+      return "Select a device to load its presets.";
+    }
+
+    const base = "Drag to reorder. Remove a preset to hide it. Clear the field to show every preset again.";
+    return this.presetsResetNotice
+      ? `Presets changed on the device, so your custom order was reset. ${base}`
+      : base;
+  };
+
   private handleValueChanged = (event: CustomEvent<{ value: NovastarCardConfig }>): void => {
     event.stopPropagation();
 
@@ -2645,6 +2736,11 @@ class NovastarHSeriesCardEditor extends LitElement {
     if (nextConfig.show_header_in_compact !== true) {
       delete nextConfig.show_header_in_compact;
     }
+    if (nextConfig.show_card_version !== true) {
+      delete nextConfig.show_card_version;
+    }
+
+    this.reconcilePresetOrder(nextConfig);
 
     const optionalKeys: Array<keyof NovastarCardConfig> = [
       "header",
@@ -2674,6 +2770,170 @@ class NovastarHSeriesCardEditor extends LitElement {
       })
     );
   };
+
+  private reconcilePresetOrder(nextConfig: NovastarCardConfig): void {
+    if (this.presetOptions.length === 0) {
+      // Device presets aren't loaded yet — preserve any existing config untouched.
+      if (Array.isArray(this.config.preset_order) && this.config.preset_order.length > 0) {
+        nextConfig.preset_order = this.config.preset_order;
+        if (Array.isArray(this.config.preset_baseline) && this.config.preset_baseline.length > 0) {
+          nextConfig.preset_baseline = this.config.preset_baseline;
+        } else {
+          delete nextConfig.preset_baseline;
+        }
+      } else {
+        delete nextConfig.preset_order;
+        delete nextConfig.preset_baseline;
+      }
+      return;
+    }
+
+    const normalized = this.normalizePresetOrder(nextConfig.preset_order);
+    if (normalized.length === 0 || this.listSequenceEqual(normalized, this.presetOptions)) {
+      // Empty (show all) or identical to device order — store nothing.
+      delete nextConfig.preset_order;
+      delete nextConfig.preset_baseline;
+    } else {
+      nextConfig.preset_order = normalized;
+      nextConfig.preset_baseline = [...this.presetOptions];
+    }
+    this.presetsResetNotice = false;
+  }
+
+  private normalizePresetOrder(value: unknown): string[] {
+    if (!Array.isArray(value)) {
+      return [];
+    }
+
+    const result: string[] = [];
+    const used = new Set<string>();
+    for (const item of value) {
+      if (typeof item !== "string") {
+        continue;
+      }
+
+      const normalizedItem = item.trim().toLowerCase();
+      const match = this.presetOptions.find((option) => option.trim().toLowerCase() === normalizedItem);
+      if (!match) {
+        continue;
+      }
+
+      const key = match.toLowerCase();
+      if (used.has(key)) {
+        continue;
+      }
+
+      used.add(key);
+      result.push(match);
+    }
+
+    return result;
+  }
+
+  private async ensurePresetOptions(): Promise<void> {
+    if (!this.hass) {
+      return;
+    }
+
+    const override = this.config.preset_entity?.trim() ?? "";
+    const deviceId = this.config.device_id?.trim() ?? "";
+    const key = `${override}|${deviceId}`;
+
+    if (key !== this.presetOptionsKey) {
+      this.presetOptionsKey = key;
+      this.resolvedPresetEntityId = override || undefined;
+
+      if (!override && deviceId && this.hass.callWS && this.resolvingPresetKey !== key) {
+        this.resolvingPresetKey = key;
+        try {
+          const registry = await this.hass.callWS({ type: "config/entity_registry/list" });
+          if (this.presetOptionsKey === key && Array.isArray(registry)) {
+            const entityIds = registry
+              .filter((entry) => {
+                if (!entry || typeof entry !== "object") {
+                  return false;
+                }
+
+                const item = entry as Record<string, unknown>;
+                return item.device_id === deviceId
+                  && !item.disabled_by
+                  && !item.hidden_by
+                  && typeof item.entity_id === "string";
+              })
+              .map((entry) => (entry as Record<string, unknown>).entity_id as string);
+
+            this.resolvedPresetEntityId = entityIds.find((id) => /_preset$/.test(id))
+              ?? entityIds.find((id) => id.startsWith("select."));
+          }
+        } catch {
+        } finally {
+          if (this.resolvingPresetKey === key) {
+            this.resolvingPresetKey = undefined;
+          }
+        }
+      }
+    }
+
+    const entityId = this.resolvedPresetEntityId;
+    const stateObj = entityId ? this.hass.states[entityId] : undefined;
+    const rawOptions = stateObj?.attributes?.options;
+    const options = Array.isArray(rawOptions)
+      ? rawOptions.filter((item): item is string => typeof item === "string")
+      : [];
+
+    if (!this.listSequenceEqual(options, this.presetOptions)) {
+      this.presetOptions = options;
+      this.requestUpdate();
+    }
+  }
+
+  private maybeResetStalePresetOrder(): void {
+    if (this.presetOptions.length === 0) {
+      return;
+    }
+
+    const order = this.config.preset_order;
+    const baseline = this.config.preset_baseline;
+    if (!Array.isArray(order) || order.length === 0) {
+      return;
+    }
+    if (!Array.isArray(baseline) || baseline.length === 0) {
+      return;
+    }
+    if (this.nameSetEqual(baseline, this.presetOptions)) {
+      return;
+    }
+
+    const nextConfig: NovastarCardConfig = { ...this.config, type: "custom:novastar-h-series-card" };
+    delete nextConfig.preset_order;
+    delete nextConfig.preset_baseline;
+    this.config = nextConfig;
+    this.presetsResetNotice = true;
+    this.requestUpdate();
+    this.dispatchEvent(
+      new CustomEvent("config-changed", {
+        detail: { config: nextConfig },
+        bubbles: true,
+        composed: true
+      })
+    );
+  }
+
+  private listSequenceEqual(left: string[], right: string[]): boolean {
+    return left.length === right.length && left.every((value, index) => value === right[index]);
+  }
+
+  private nameSetEqual(left: string[], right: string[]): boolean {
+    if (left.length !== right.length) {
+      return false;
+    }
+
+    const normalize = (list: string[]): string[] =>
+      list.map((item) => item.trim().toLowerCase()).sort();
+    const normalizedLeft = normalize(left);
+    const normalizedRight = normalize(right);
+    return normalizedLeft.every((value, index) => value === normalizedRight[index]);
+  }
 
   private async ensureDefaultDeviceId(): Promise<void> {
     if (this.attemptedAutoDeviceDefault || !this.hass?.callWS) {

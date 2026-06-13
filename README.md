@@ -68,7 +68,15 @@ temperature_entity: sensor.novastar_h_series_temperature
 - `false` (default): hide the header in compact mode.
 - `true`: show the header (and power button) in compact mode.
 
+`show_card_version` options:
+- `false` (default): hide the card version.
+- `true`: show the card version at the bottom of the Detailed view.
+
 `screen_color` and `screen_background_color` (optional): customize the layout preview colors. `screen_color` sets the layer tone and `screen_background_color` sets the screen backdrop. Each accepts a Home Assistant theme color name (e.g. `blue`) or a hex value (e.g. `#202733`); leave unset to use the defaults. Both are most easily set with the color pickers in the visual editor.
+
+`preset_order` (optional): customize which presets appear and in what order. In the visual editor, a **Preset order** field lists the presets read live from your NovaStar device as draggable chips — drag to reorder, and remove a chip to hide that preset. The same order is used in both Detailed and Standard modes; in Standard mode the first presets become the quick buttons (up to 5 shown directly, otherwise the first 4 plus a "more" button). Clear the field to show every preset again in the device's default order.
+
+If the set of presets on the device changes (a preset added, removed, or renamed via the NovaStar web interface), the card automatically discards your saved order and falls back to showing all presets in device order, so nothing is ever stranded. A companion `preset_baseline` value is written automatically to detect those changes — you don't need to set it yourself.
 
 Compact example:
 
