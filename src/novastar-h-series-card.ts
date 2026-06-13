@@ -243,30 +243,48 @@ export class NovastarHSeriesCard extends LitElement {
       .filter(Boolean)
       .join(" ");
 
+    const showStatusDot = !isDetailed && Boolean(powerEntity);
+    const showTempDot = !isDetailed && Boolean(temperatureEntity);
+    const showBrightnessButton = isStandard && showBrightnessSlider;
+    const showStatusSection = showStatusDot || showTempDot || showBrightnessButton;
+    const temperatureSeverity = this.getTemperatureSeverity(temperatureEntity?.state);
+
     return html`
       <ha-card class="nova-card nova-card--${displayMode} nova-card--theme-${themeMode} ${powerIsOn ? "is-on" : "is-off"}">
         ${showHeader
           ? html`
               <div class="header-row">
                 <div class="header-lead">
-                  ${!isDetailed && powerEntity
-                    ? html`<span
-                        class="status-dot ${powerIsOn ? "status-dot--on" : "status-dot--off"}"
-                        title=${controllerValue}
-                      ></span>`
-                    : nothing}
                   <div class="header">${headerText}</div>
                 </div>
                 <div class="header-actions">
-                  ${isStandard && showBrightnessSlider
-                    ? this.renderHeaderBrightnessToggle(
-                        brightnessMin,
-                        brightnessMax,
-                        brightnessStep,
-                        brightnessValue,
-                        powerFadeToBlack,
-                        brightnessUnit
-                      )
+                  ${showStatusSection
+                    ? html`
+                        <div class="header-status">
+                          ${showStatusDot
+                            ? html`<span
+                                class="status-dot ${powerIsOn ? "status-dot--on" : "status-dot--off"}"
+                                title=${controllerValue}
+                              ></span>`
+                            : nothing}
+                          ${showTempDot
+                            ? html`<span
+                                class="status-dot status-dot--temp-${temperatureSeverity}"
+                                title=${`Temperature: ${temperatureEntity?.state ?? ""}`}
+                              ></span>`
+                            : nothing}
+                          ${showBrightnessButton
+                            ? this.renderHeaderBrightnessToggle(
+                                brightnessMin,
+                                brightnessMax,
+                                brightnessStep,
+                                brightnessValue,
+                                powerFadeToBlack,
+                                brightnessUnit
+                              )
+                            : nothing}
+                        </div>
+                      `
                     : nothing}
                   ${powerEntity ? this.renderPowerButton(powerIsOn) : nothing}
                 </div>
@@ -349,6 +367,20 @@ export class NovastarHSeriesCard extends LitElement {
 
   private getThemeMode(): ThemeMode {
     return this.config?.theme === "ha" ? "ha" : "nova";
+  }
+
+  private getTemperatureSeverity(state: string | undefined): "normal" | "warning" | "critical" | "unknown" {
+    const value = (state ?? "").trim().toLowerCase();
+    if (value === "normal") {
+      return "normal";
+    }
+    if (value === "warning") {
+      return "warning";
+    }
+    if (value === "critical") {
+      return "critical";
+    }
+    return "unknown";
   }
 
   private renderPowerButton(powerIsOn: boolean) {
@@ -541,6 +573,9 @@ export class NovastarHSeriesCard extends LitElement {
       --nova-surface: #1c2130;
       --nova-surface-2: #262c3c;
       --nova-success: #41b85f;
+      --nova-info: #5ab4ff;
+      --nova-warning: #f5a524;
+      --nova-danger: #e5484d;
       --nova-screen: #0b0c10;
       --nova-radius: 16px;
       --nova-radius-sm: 14px;
@@ -560,6 +595,9 @@ export class NovastarHSeriesCard extends LitElement {
       --nova-surface: var(--ha-card-background, var(--card-background-color, #ffffff));
       --nova-surface-2: color-mix(in srgb, var(--nova-surface) 84%, var(--nova-text) 16%);
       --nova-success: var(--success-color, #43a047);
+      --nova-info: var(--info-color, #4dabf5);
+      --nova-warning: var(--warning-color, #f5a524);
+      --nova-danger: var(--error-color, #e5484d);
       --nova-radius: var(--ha-card-border-radius, 12px);
       --nova-radius-sm: min(var(--ha-card-border-radius, 12px), 14px);
     }
@@ -591,6 +629,13 @@ export class NovastarHSeriesCard extends LitElement {
       min-width: 0;
     }
 
+    .header-status {
+      align-items: center;
+      display: inline-flex;
+      flex: none;
+      gap: 8px;
+    }
+
     .header {
       font-size: 1.15rem;
       font-weight: 600;
@@ -615,6 +660,25 @@ export class NovastarHSeriesCard extends LitElement {
     }
 
     .status-dot--off {
+      background: color-mix(in srgb, var(--nova-muted) 55%, transparent);
+    }
+
+    .status-dot--temp-normal {
+      background: var(--nova-info);
+      box-shadow: 0 0 8px color-mix(in srgb, var(--nova-info) 70%, transparent);
+    }
+
+    .status-dot--temp-warning {
+      background: var(--nova-warning);
+      box-shadow: 0 0 8px color-mix(in srgb, var(--nova-warning) 70%, transparent);
+    }
+
+    .status-dot--temp-critical {
+      background: var(--nova-danger);
+      box-shadow: 0 0 8px color-mix(in srgb, var(--nova-danger) 70%, transparent);
+    }
+
+    .status-dot--temp-unknown {
       background: color-mix(in srgb, var(--nova-muted) 55%, transparent);
     }
 
