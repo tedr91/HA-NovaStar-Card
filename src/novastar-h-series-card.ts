@@ -110,6 +110,7 @@ export class NovastarHSeriesCard extends LitElement {
   private resolvedForHass?: HomeAssistant;
   private lastRelevantStateSignature = "";
   private activeLayerSourceChooser?: LayerSourceChooser;
+  private presetChooserOpen = false;
 
   static properties = {
     hass: { attribute: false, noAccessor: true },
@@ -297,59 +298,42 @@ export class NovastarHSeriesCard extends LitElement {
             `
           : nothing}
         <div class=${contentClasses}>
-          ${isCompact
-            ? nothing
-            : isDetailed
-              ? html`
-                  <div class="row">
-                    <span class="label">Status</span>
-                    <span class="value status-value status-value--${powerIsOn ? "on" : "off"}">${controllerValue}</span>
-                  </div>
-                  ${temperatureEntity
-                    ? html`
-                        <div class="row">
-                          <span class="label">Temperature</span>
-                          <span class="value">${temperatureEntity.state}${temperatureUnit}</span>
-                        </div>
-                      `
-                    : nothing}
-                  ${brightnessEntity
-                    ? html`
-                        <div class="row input-row">
-                          <span class="label">Brightness</span>
-                          ${showBrightnessSlider
-                            ? this.renderBrightnessControl(
-                                brightnessMin,
-                                brightnessMax,
-                                brightnessStep,
-                                brightnessValue,
-                                powerFadeToBlack,
-                                brightnessUnit
-                              )
-                            : html`<span class="value">${brightnessEntity.state}${brightnessUnit}</span>`}
-                        </div>
-                      `
-                    : nothing}
-                  ${presetEntity
-                    ? html`
-                        <div class="row input-row preset-row">
-                          <span class="label">Preset</span>
-                          ${presetOptions.length > 0
-                            ? this.renderPresetChips(presetOptions, selectedPresetOption, powerFadeToBlack)
-                            : html`<span class="value">${presetEntity.state}</span>`}
-                        </div>
-                      `
-                    : nothing}
-                `
-              : html`
-                  ${presetEntity && presetOptions.length > 0
-                    ? html`<div class="standard-block standard-block--chips">${this.renderPresetChips(
-                        presetOptions,
-                        selectedPresetOption,
-                        powerFadeToBlack
-                      )}</div>`
-                    : nothing}
-                `}
+          ${isDetailed
+            ? html`
+                <div class="row">
+                  <span class="label">Status</span>
+                  <span class="value status-value status-value--${powerIsOn ? "on" : "off"}">${controllerValue}</span>
+                </div>
+                ${temperatureEntity
+                  ? html`
+                      <div class="row">
+                        <span class="label">Temperature</span>
+                        <span class="value">${temperatureEntity.state}${temperatureUnit}</span>
+                      </div>
+                    `
+                  : nothing}
+                ${brightnessEntity
+                  ? html`
+                      <div class="row input-row">
+                        <span class="label">Brightness</span>
+                        ${showBrightnessSlider
+                          ? this.renderBrightnessControl(
+                              brightnessMin,
+                              brightnessMax,
+                              brightnessStep,
+                              brightnessValue,
+                              powerFadeToBlack,
+                              brightnessUnit
+                            )
+                          : html`<span class="value">${brightnessEntity.state}${brightnessUnit}</span>`}
+                      </div>
+                    `
+                  : nothing}
+              `
+            : nothing}
+          ${!isCompact && presetEntity
+            ? this.renderPresetArea(presetOptions, selectedPresetOption, powerFadeToBlack, isDetailed, presetEntity)
+            : nothing}
           ${layoutPayload
             ? this.renderLayoutPreview(layoutPayload, bareLayoutMode)
             : isCompact
@@ -357,6 +341,9 @@ export class NovastarHSeriesCard extends LitElement {
               : nothing}
           ${isDetailed ? this.renderVersionFooter() : nothing}
         </div>
+        ${this.presetChooserOpen && presetEntity && presetOptions.length > 0
+          ? this.renderPresetChooser(presetOptions, selectedPresetOption, powerFadeToBlack)
+          : nothing}
       </ha-card>
     `;
   }
@@ -580,23 +567,101 @@ export class NovastarHSeriesCard extends LitElement {
     `;
   }
 
-  private renderPresetChips(options: string[], selected: string, disabled: boolean) {
+  private renderPresetArea(
+    options: string[],
+    selected: string,
+    disabled: boolean,
+    isDetailed: boolean,
+    presetEntity: HassEntity
+  ) {
+    if (options.length === 0) {
+      return html`
+        <div class="preset-area">
+          ${isDetailed ? html`<div class="preset-heading">Presets</div>` : nothing}
+          <div class="row"><span class="value">${presetEntity.state}</span></div>
+        </div>
+      `;
+    }
+
+    const visibleOptions = isDetailed ? options : options.slice(0, 4);
+
     return html`
-      <div class="preset-chips" role="group" aria-label="Preset">
-        ${options.map((option) => {
-          const isActive = this.optionEquals(option, selected);
-          return html`
-            <button
-              type="button"
-              class="preset-chip ${isActive ? "preset-chip--active" : ""}"
-              ?disabled=${disabled}
-              aria-pressed=${isActive ? "true" : "false"}
-              @click=${() => this.handlePresetButtonClick(option)}
-            >${option}</button>
-          `;
-        })}
+      <div class="preset-area">
+        ${isDetailed ? html`<div class="preset-heading">Presets</div>` : nothing}
+        <div class="preset-grid" role="group" aria-label="Presets">
+          ${visibleOptions.map((option) => {
+            const isActive = this.optionEquals(option, selected);
+            return html`
+              <button
+                type="button"
+                class="preset-button ${isActive ? "preset-button--active" : ""}"
+                ?disabled=${disabled}
+                aria-pressed=${isActive ? "true" : "false"}
+                title=${option}
+                @click=${() => this.handlePresetButtonClick(option)}
+              ><span class="preset-button-label">${option}</span></button>
+            `;
+          })}
+          ${!isDetailed
+            ? html`
+                <button
+                  type="button"
+                  class="preset-button preset-button--more"
+                  ?disabled=${disabled}
+                  aria-haspopup="true"
+                  aria-expanded=${this.presetChooserOpen ? "true" : "false"}
+                  aria-label="Show all presets"
+                  title="Show all presets"
+                  @click=${this.openPresetChooser}
+                >
+                  <svg class="preset-more-icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M16 12a2 2 0 1 1 4 0 2 2 0 0 1-4 0zm-6 0a2 2 0 1 1 4 0 2 2 0 0 1-4 0zm-6 0a2 2 0 1 1 4 0 2 2 0 0 1-4 0z"></path>
+                  </svg>
+                </button>
+              `
+            : nothing}
+        </div>
       </div>
     `;
+  }
+
+  private renderPresetChooser(options: string[], selected: string, disabled: boolean) {
+    return html`
+      <div class="layer-source-modal" @click=${this.closePresetChooser}>
+        <div class="layer-source-modal-content" @click=${(event: Event) => event.stopPropagation()}>
+          <div class="layer-source-modal-title">Select Preset</div>
+          <div class="layer-source-modal-options">
+            ${options.map((option) => html`
+              <button
+                type="button"
+                class="layer-source-modal-option ${this.optionEquals(option, selected) ? "selected" : ""}"
+                ?disabled=${disabled}
+                @click=${() => this.handlePresetChooserOptionClick(option)}
+              >${option}</button>
+            `)}
+          </div>
+          <div class="layer-source-modal-actions">
+            <button type="button" class="layer-source-modal-close" @click=${this.closePresetChooser}>Close</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  private openPresetChooser = (): void => {
+    this.presetChooserOpen = true;
+    this.requestUpdate();
+  };
+
+  private closePresetChooser = (): void => {
+    this.presetChooserOpen = false;
+    this.requestUpdate();
+  };
+
+  private async handlePresetChooserOptionClick(option: string): Promise<void> {
+    this.presetChooserOpen = false;
+    this.requestUpdate();
+    await this.handlePresetButtonClick(option);
   }
 
   private renderVersionFooter() {
@@ -646,6 +711,7 @@ export class NovastarHSeriesCard extends LitElement {
 
     ha-card {
       overflow: hidden;
+      position: relative;
     }
 
     /* Nova mode paints its own card surface so it looks identical under any HA theme */
@@ -983,13 +1049,87 @@ export class NovastarHSeriesCard extends LitElement {
       align-items: center;
     }
 
-    .preset-row {
-      align-items: flex-start;
-      flex-wrap: wrap;
+    .preset-area {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
     }
 
-    .standard-block {
+    .preset-heading {
+      color: var(--nova-muted);
+      font-size: 0.95rem;
+      font-weight: 500;
+    }
+
+    .preset-grid {
+      display: grid;
+      gap: 8px;
+      grid-template-columns: repeat(5, 1fr);
+    }
+
+    .preset-button {
+      align-items: flex-start;
+      aspect-ratio: 1 / 1;
+      background: var(--nova-surface-2);
+      border: 1px solid var(--nova-divider);
+      border-radius: var(--nova-radius-sm);
+      color: var(--nova-text);
+      cursor: pointer;
       display: flex;
+      flex-direction: column;
+      font: inherit;
+      font-size: 0.82rem;
+      font-weight: 600;
+      justify-content: flex-end;
+      line-height: 1.15;
+      overflow: hidden;
+      padding: 8px;
+      text-align: left;
+      transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease, transform 0.08s ease;
+      word-break: break-word;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .preset-button:hover {
+      border-color: color-mix(in srgb, var(--nova-accent) 50%, var(--nova-divider));
+    }
+
+    .preset-button:active {
+      transform: scale(0.96);
+    }
+
+    .preset-button:focus-visible {
+      outline: 2px solid var(--nova-accent);
+      outline-offset: 2px;
+    }
+
+    .preset-button--active {
+      background: var(--nova-accent);
+      border-color: color-mix(in srgb, var(--nova-accent) 60%, #ffffff);
+      box-shadow: 0 2px 10px color-mix(in srgb, var(--nova-accent) 35%, transparent);
+      color: var(--nova-on-accent);
+    }
+
+    .preset-button:disabled {
+      opacity: 0.45;
+      pointer-events: none;
+    }
+
+    .preset-button--more {
+      align-items: center;
+      color: var(--nova-muted);
+      grid-column: 5;
+      justify-content: center;
+    }
+
+    .preset-button--more:hover {
+      color: var(--nova-text);
+    }
+
+    .preset-more-icon {
+      fill: currentColor;
+      height: 26px;
+      width: 26px;
     }
 
     .brightness-control {
@@ -1084,48 +1224,7 @@ export class NovastarHSeriesCard extends LitElement {
       pointer-events: none;
     }
 
-    .preset-chips {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-
-    .preset-chip {
-      background: var(--nova-surface-2);
-      border: 1px solid var(--nova-divider);
-      border-radius: var(--nova-radius-sm);
-      color: var(--nova-text);
-      cursor: pointer;
-      font: inherit;
-      font-size: 0.92rem;
-      font-weight: 600;
-      min-height: 38px;
-      padding: 8px 16px;
-      transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease, transform 0.08s ease;
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    .preset-chip:hover {
-      border-color: color-mix(in srgb, var(--nova-accent) 50%, var(--nova-divider));
-    }
-
-    .preset-chip:active {
-      transform: scale(0.96);
-    }
-
-    .preset-chip:focus-visible {
-      outline: 2px solid var(--nova-accent);
-      outline-offset: 2px;
-    }
-
-    .preset-chip--active {
-      background: var(--nova-accent);
-      border-color: color-mix(in srgb, var(--nova-accent) 60%, #ffffff);
-      box-shadow: 0 2px 10px color-mix(in srgb, var(--nova-accent) 35%, transparent);
-      color: var(--nova-on-accent);
-    }
-
-    .preset-chip:disabled {
+    .preset-button:disabled {
       opacity: 0.45;
       pointer-events: none;
     }
