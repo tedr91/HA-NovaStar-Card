@@ -158,6 +158,21 @@ export class NovastarHSeriesCard extends LitElement {
   protected updated(): void {
     void this.ensureResolvedEntities();
     this.syncOptimisticPowerState();
+    this.syncModalDialogs();
+  }
+
+  private syncModalDialogs(): void {
+    const root = this.renderRoot as ShadowRoot;
+
+    const presetDialog = root.getElementById("nova-preset-dialog") as HTMLDialogElement | null;
+    if (presetDialog && this.presetChooserOpen && !presetDialog.open) {
+      presetDialog.showModal();
+    }
+
+    const layerDialog = root.getElementById("nova-layer-dialog") as HTMLDialogElement | null;
+    if (layerDialog && this.activeLayerSourceChooser && !layerDialog.open) {
+      layerDialog.showModal();
+    }
   }
 
   protected render() {
@@ -627,26 +642,37 @@ export class NovastarHSeriesCard extends LitElement {
 
   private renderPresetChooser(options: string[], selected: string, disabled: boolean) {
     return html`
-      <div class="layer-source-modal" @click=${this.closePresetChooser}>
-        <div class="layer-source-modal-content" @click=${(event: Event) => event.stopPropagation()}>
-          <div class="layer-source-modal-title">Select Preset</div>
-          <div class="layer-source-modal-options">
+      <dialog
+        id="nova-preset-dialog"
+        class="nova-dialog"
+        @cancel=${this.closePresetChooser}
+        @click=${this.handlePresetDialogClick}
+      >
+        <div class="nova-dialog-content">
+          <div class="nova-dialog-title">Select Preset</div>
+          <div class="nova-dialog-options">
             ${options.map((option) => html`
               <button
                 type="button"
-                class="layer-source-modal-option ${this.optionEquals(option, selected) ? "selected" : ""}"
+                class="nova-dialog-option ${this.optionEquals(option, selected) ? "selected" : ""}"
                 ?disabled=${disabled}
                 @click=${() => this.handlePresetChooserOptionClick(option)}
               >${option}</button>
             `)}
           </div>
-          <div class="layer-source-modal-actions">
-            <button type="button" class="layer-source-modal-close" @click=${this.closePresetChooser}>Close</button>
+          <div class="nova-dialog-actions">
+            <button type="button" class="nova-dialog-close" @click=${this.closePresetChooser}>Close</button>
           </div>
         </div>
-      </div>
+      </dialog>
     `;
   }
+
+  private handlePresetDialogClick = (event: MouseEvent): void => {
+    if (event.target === event.currentTarget) {
+      this.closePresetChooser();
+    }
+  };
 
   private openPresetChooser = (): void => {
     this.presetChooserOpen = true;
@@ -1288,44 +1314,43 @@ export class NovastarHSeriesCard extends LitElement {
       text-align: right;
     }
 
-    .layer-source-modal {
-      align-items: center;
-      backdrop-filter: blur(2px);
-      background: rgba(0, 0, 0, 0.55);
-      border-radius: var(--nova-radius-sm);
-      display: flex;
-      inset: 0;
-      justify-content: center;
-      padding: 16px;
-      position: absolute;
-      z-index: 2;
-    }
-
-    .layer-source-modal-content {
+    .nova-dialog {
       background: var(--nova-surface);
       border: 1px solid var(--nova-divider);
       border-radius: var(--nova-radius);
       box-shadow: 0 18px 48px rgba(0, 0, 0, 0.45);
+      box-sizing: border-box;
       color: var(--nova-text);
-      max-width: min(440px, 96%);
-      padding: 18px;
+      max-width: min(440px, 92vw);
+      padding: 0;
       width: 100%;
     }
 
-    .layer-source-modal-title {
+    .nova-dialog::backdrop {
+      background: rgba(0, 0, 0, 0.55);
+      -webkit-backdrop-filter: blur(2px);
+      backdrop-filter: blur(2px);
+    }
+
+    .nova-dialog-content {
+      box-sizing: border-box;
+      padding: 18px;
+    }
+
+    .nova-dialog-title {
       font-size: 1.05rem;
       font-weight: 600;
       margin-bottom: 14px;
     }
 
-    .layer-source-modal-options {
+    .nova-dialog-options {
       display: grid;
       gap: 10px;
-      max-height: 300px;
+      max-height: min(60vh, 360px);
       overflow: auto;
     }
 
-    .layer-source-modal-option {
+    .nova-dialog-option {
       align-items: center;
       background: var(--nova-surface-2);
       border: 1px solid var(--nova-divider);
@@ -1343,28 +1368,28 @@ export class NovastarHSeriesCard extends LitElement {
       width: 100%;
     }
 
-    .layer-source-modal-option:hover {
+    .nova-dialog-option:hover {
       border-color: color-mix(in srgb, var(--nova-accent) 45%, var(--nova-divider));
     }
 
-    .layer-source-modal-option.selected {
+    .nova-dialog-option.selected {
       background: color-mix(in srgb, var(--nova-accent) 14%, transparent);
       border-color: var(--nova-accent);
       box-shadow: inset 0 0 0 1px var(--nova-accent);
     }
 
-    .layer-source-modal-option:disabled {
+    .nova-dialog-option:disabled {
       opacity: 0.5;
       pointer-events: none;
     }
 
-    .layer-source-modal-actions {
+    .nova-dialog-actions {
       display: flex;
       justify-content: flex-end;
       margin-top: 16px;
     }
 
-    .layer-source-modal-close {
+    .nova-dialog-close {
       background: transparent;
       border: 1px solid var(--nova-divider);
       border-radius: var(--nova-radius-sm);
@@ -1376,7 +1401,7 @@ export class NovastarHSeriesCard extends LitElement {
       padding: 8px 20px;
     }
 
-    .layer-source-modal-close:hover {
+    .nova-dialog-close:hover {
       border-color: var(--nova-accent);
     }
   `;
@@ -1632,24 +1657,29 @@ export class NovastarHSeriesCard extends LitElement {
     }
 
     return html`
-      <div class="layer-source-modal" @click=${this.handleLayerSourceModalBackdropClick}>
-        <div class="layer-source-modal-content" @click=${(event: Event) => event.stopPropagation()}>
-          <div class="layer-source-modal-title">Layer ${chooser.layerNumber} Source</div>
-          <div class="layer-source-modal-options">
+      <dialog
+        id="nova-layer-dialog"
+        class="nova-dialog"
+        @cancel=${this.closeLayerSourceChooser}
+        @click=${this.handleLayerDialogClick}
+      >
+        <div class="nova-dialog-content">
+          <div class="nova-dialog-title">Layer ${chooser.layerNumber} Source</div>
+          <div class="nova-dialog-options">
             ${chooser.options.map((option) => html`
               <button
                 type="button"
-                class="layer-source-modal-option ${this.optionEquals(option, chooser.selectedOption) ? "selected" : ""}"
+                class="nova-dialog-option ${this.optionEquals(option, chooser.selectedOption) ? "selected" : ""}"
                 ?disabled=${powerFadeToBlack}
                 @click=${() => this.handleLayerSourceModalOptionClick(option)}
               >${option}</button>
             `)}
           </div>
-          <div class="layer-source-modal-actions">
-            <button type="button" class="layer-source-modal-close" @click=${this.closeLayerSourceChooser}>Close</button>
+          <div class="nova-dialog-actions">
+            <button type="button" class="nova-dialog-close" @click=${this.closeLayerSourceChooser}>Close</button>
           </div>
         </div>
-      </div>
+      </dialog>
     `;
   }
 
@@ -1672,8 +1702,10 @@ export class NovastarHSeriesCard extends LitElement {
     this.requestUpdate();
   };
 
-  private handleLayerSourceModalBackdropClick = (): void => {
-    this.closeLayerSourceChooser();
+  private handleLayerDialogClick = (event: MouseEvent): void => {
+    if (event.target === event.currentTarget) {
+      this.closeLayerSourceChooser();
+    }
   };
 
   private async handleLayerSourceModalOptionClick(option: string): Promise<void> {
