@@ -871,11 +871,11 @@ export class NovastarHSeriesCard extends LitElement {
       cursor: pointer;
       display: inline-flex;
       flex: none;
-      height: 38px;
+      height: 30px;
       justify-content: center;
       padding: 0;
       transition: background 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.08s ease;
-      width: 38px;
+      width: 30px;
       -webkit-tap-highlight-color: transparent;
     }
 
@@ -894,8 +894,8 @@ export class NovastarHSeriesCard extends LitElement {
 
     .power-button-icon {
       fill: currentColor;
-      height: 20px;
-      width: 20px;
+      height: 16px;
+      width: 16px;
     }
 
     .power-button--on {
@@ -916,7 +916,7 @@ export class NovastarHSeriesCard extends LitElement {
       align-items: center;
       display: inline-flex;
       flex: none;
-      gap: 10px;
+      gap: 14px;
     }
 
     .icon-button {
@@ -931,6 +931,7 @@ export class NovastarHSeriesCard extends LitElement {
       flex: none;
       height: 30px;
       justify-content: center;
+      margin-left: 6px;
       padding: 0;
       transition: color 0.2s ease, transform 0.08s ease;
       width: 30px;
