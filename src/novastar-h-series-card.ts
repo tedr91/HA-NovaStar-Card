@@ -1490,8 +1490,8 @@ export class NovastarHSeriesCard extends LitElement {
               const horizontalPadding = Math.max(18, labelFontSize * 0.35);
               const maxLabelWidth = Math.max(32, layer.width * 0.9);
 
-              const sourceIconScaleX = (labelFontSize * 1.04) / 480;
-              const sourceIconScaleY = (labelFontSize * 0.9) / 320;
+              const sourceIconScaleX = (labelFontSize * 0.832) / 480;
+              const sourceIconScaleY = (labelFontSize * 0.72) / 320;
               const sourceIconWidth = 480 * sourceIconScaleX;
               const sourceIconGap = labelFontSize * 0.36;
               const sourceIconSlot = sourceIconWidth + sourceIconGap;
@@ -1514,6 +1514,7 @@ export class NovastarHSeriesCard extends LitElement {
               const sourceIconTranslateY = labelY - (256 * sourceIconScaleY);
               const textX = showSourceIcon ? contentStartX + sourceIconSlot : labelX;
               const textAnchor = showSourceIcon ? "start" : "middle";
+              const labelTextY = labelY + (labelFontSize * 0.1);
 
               const audioIconSize = Math.max(51, Math.min(138, minLayerDimension * 0.27));
               const audioIconPadding = Math.max(10, audioIconSize * 0.22);
@@ -1633,7 +1634,7 @@ export class NovastarHSeriesCard extends LitElement {
                       <text
                         class=${layerClickable ? "layout-layer-hitbox" : ""}
                         x=${textX}
-                        y=${labelY}
+                        y=${labelTextY}
                         font-weight="700"
                         style=${`fill:${labelFill};font-size:${labelFontSize}px;font-family:inherit;`}
                         text-anchor=${textAnchor}
