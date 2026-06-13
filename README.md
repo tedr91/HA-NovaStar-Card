@@ -64,6 +64,8 @@ temperature_entity: sensor.novastar_h_series_temperature
 - `nova` (default): self-contained, polished dark appearance that looks the same regardless of your Home Assistant theme.
 - `ha`: follow the active Home Assistant theme (accent color, surfaces, and corner radius).
 
+`screen_color` sets the color of the screen area in the layout preview (the dark backdrop behind the layers). It accepts a hex color (e.g. `#070809`) and can be picked with the color picker in the visual editor. Defaults to a near-black tone.
+
 `show_header_in_compact` options:
 - `false` (default): hide the header in compact mode.
 - `true`: show the header (and power button) in compact mode.

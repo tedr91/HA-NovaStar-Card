@@ -23,6 +23,7 @@ type NovastarCardConfig = {
   display_mode?: DisplayMode;
   theme?: ThemeMode;
   show_header_in_compact?: boolean;
+  screen_color?: string;
   debug_layout?: boolean;
   device_id?: string;
   power_entity?: string;
@@ -247,9 +248,14 @@ export class NovastarHSeriesCard extends LitElement {
     const showBrightnessButton = !isDetailed && showBrightnessSlider;
     const showStatusSection = showStatusDot || showTempDot || showBrightnessButton;
     const temperatureSeverity = this.getTemperatureSeverity(temperatureEntity?.state);
+    const screenColorOverride = this.getScreenColorOverride();
+    const cardStyle = screenColorOverride ? `--nova-screen: ${screenColorOverride};` : "";
 
     return html`
-      <ha-card class="nova-card nova-card--${displayMode} nova-card--theme-${themeMode} ${powerIsOn ? "is-on" : "is-off"}">
+      <ha-card
+        class="nova-card nova-card--${displayMode} nova-card--theme-${themeMode} ${powerIsOn ? "is-on" : "is-off"}"
+        style=${cardStyle}
+      >
         ${showHeader
           ? html`
               <div class="header-row">
@@ -380,6 +386,16 @@ export class NovastarHSeriesCard extends LitElement {
       return "critical";
     }
     return "unknown";
+  }
+
+  private getScreenColorOverride(): string | undefined {
+    const raw = this.config?.screen_color;
+    if (typeof raw !== "string") {
+      return undefined;
+    }
+
+    const value = raw.trim();
+    return /^#([0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(value) ? value : undefined;
   }
 
   private renderPowerButton(powerIsOn: boolean) {
@@ -575,7 +591,7 @@ export class NovastarHSeriesCard extends LitElement {
       --nova-info: #5ab4ff;
       --nova-warning: #f5a524;
       --nova-danger: #e5484d;
-      --nova-screen: #0b0c10;
+      --nova-screen: #070809;
       --nova-radius: 16px;
       --nova-radius-sm: 14px;
       --nova-pill: 999px;
@@ -2308,6 +2324,7 @@ const NOVASTAR_EDITOR_FIELD_LABELS: Record<string, string> = {
   display_mode: "Display mode",
   theme: "Theme styling",
   show_header_in_compact: "Show header in Compact mode",
+  screen_color: "Layout screen color",
   device_id: "Device",
   power_entity: "Power entity",
   preset_entity: "Preset selection entity",
@@ -2318,6 +2335,22 @@ const NOVASTAR_EDITOR_FIELD_LABELS: Record<string, string> = {
   brightness_entity: "Brightness entity",
   temperature_entity: "Temperature entity"
 };
+
+function novastarHexToRgb(hex: string): [number, number, number] | undefined {
+  const match = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
+  if (!match) {
+    return undefined;
+  }
+
+  const intValue = Number.parseInt(match[1], 16);
+  return [(intValue >> 16) & 255, (intValue >> 8) & 255, intValue & 255];
+}
+
+function novastarRgbToHex(rgb: readonly number[]): string {
+  const toHex = (value: number) =>
+    Math.max(0, Math.min(255, Math.round(value))).toString(16).padStart(2, "0");
+  return `#${toHex(rgb[0] ?? 0)}${toHex(rgb[1] ?? 0)}${toHex(rgb[2] ?? 0)}`;
+}
 
 class NovastarHSeriesCardEditor extends LitElement {
   public hass?: HomeAssistant;
@@ -2348,11 +2381,19 @@ class NovastarHSeriesCardEditor extends LitElement {
       return nothing;
     }
 
-    const data: NovastarCardConfig = {
+    const data: Record<string, unknown> = {
       display_mode: "standard",
       theme: "nova",
       ...this.config
     };
+    const screenRgb = typeof this.config.screen_color === "string"
+      ? novastarHexToRgb(this.config.screen_color)
+      : undefined;
+    if (screenRgb) {
+      data.screen_color = screenRgb;
+    } else {
+      delete data.screen_color;
+    }
 
     return html`
       <ha-form
@@ -2406,6 +2447,10 @@ class NovastarHSeriesCardEditor extends LitElement {
             ]
           }
         }
+      },
+      {
+        name: "screen_color",
+        selector: { color_rgb: {} }
       }
     ];
 
@@ -2457,6 +2502,13 @@ class NovastarHSeriesCardEditor extends LitElement {
     }
     if (nextConfig.show_header_in_compact !== true) {
       delete nextConfig.show_header_in_compact;
+    }
+
+    const rawScreenColor = (event.detail.value as Record<string, unknown>).screen_color;
+    if (Array.isArray(rawScreenColor) && rawScreenColor.length >= 3) {
+      nextConfig.screen_color = novastarRgbToHex(rawScreenColor as number[]);
+    } else if (typeof nextConfig.screen_color !== "string" || nextConfig.screen_color.trim() === "") {
+      delete nextConfig.screen_color;
     }
 
     const optionalKeys: Array<keyof NovastarCardConfig> = [
