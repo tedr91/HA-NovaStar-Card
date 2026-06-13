@@ -1434,6 +1434,8 @@ export class NovastarHSeriesCard extends LitElement {
     }
   `;
 
+  private labelMeasureContext?: CanvasRenderingContext2D | null;
+
   private renderLayoutPreview(payload: LayoutPayload, compactMode = false) {
     const viewBoxWidth = payload.screenWidth;
     const viewBoxHeight = payload.screenHeight;
@@ -1502,7 +1504,7 @@ export class NovastarHSeriesCard extends LitElement {
               const visibleLabel = label.length <= maxChars
                 ? label
                 : `${label.slice(0, Math.max(1, maxChars - 1))}…`;
-              const estimatedTextWidth = visibleLabel.length * labelFontSize * 0.62;
+              const estimatedTextWidth = this.measureLabelWidth(visibleLabel, labelFontSize) + 2;
               const contentWidth = (showSourceIcon ? sourceIconSlot : 0) + estimatedTextWidth;
               const badgeWidth = Math.min(maxLabelWidth, contentWidth + (horizontalPadding * 2));
               const badgeHeight = Math.max(28, labelFontSize * 1.35);
@@ -1662,6 +1664,30 @@ export class NovastarHSeriesCard extends LitElement {
           : nothing}
       </div>
     `;
+  }
+
+  private measureLabelWidth(text: string, fontSize: number): number {
+    if (this.labelMeasureContext === undefined) {
+      this.labelMeasureContext = document.createElement("canvas").getContext("2d");
+    }
+
+    const context = this.labelMeasureContext;
+    if (!context) {
+      // Canvas unavailable — fall back to a rough average glyph-advance estimate.
+      return text.length * fontSize * 0.55;
+    }
+
+    let fontFamily = "Roboto, Noto, sans-serif";
+    try {
+      const resolved = getComputedStyle(this).fontFamily;
+      if (resolved) {
+        fontFamily = resolved;
+      }
+    } catch {
+    }
+
+    context.font = `700 ${fontSize}px ${fontFamily}`;
+    return context.measureText(text).width;
   }
 
   private getLayerSourceLabelMap(): Map<number, string> {
