@@ -1350,7 +1350,7 @@ export class NovastarHSeriesCard extends LitElement {
     }
 
     .layout-layers--off {
-      opacity: 0.3;
+      opacity: 0.15;
     }
 
     .layout-off-label {
@@ -1490,9 +1490,10 @@ export class NovastarHSeriesCard extends LitElement {
               const horizontalPadding = Math.max(18, labelFontSize * 0.35);
               const maxLabelWidth = Math.max(32, layer.width * 0.9);
 
-              const sourceIconSize = labelFontSize * 1.05;
-              const sourceIconGap = labelFontSize * 0.32;
-              const sourceIconSlot = sourceIconSize + sourceIconGap;
+              const sourceIconScale = (labelFontSize * 1.05) / 320;
+              const sourceIconWidth = 480 * sourceIconScale;
+              const sourceIconGap = labelFontSize * 0.4;
+              const sourceIconSlot = sourceIconWidth + sourceIconGap;
               const textBudget = maxLabelWidth - (horizontalPadding * 2);
               const showSourceIcon = (textBudget - sourceIconSlot) >= (labelFontSize * 0.62 * 2);
               const charBudget = showSourceIcon ? textBudget - sourceIconSlot : textBudget;
@@ -1508,9 +1509,8 @@ export class NovastarHSeriesCard extends LitElement {
               const badgeY = labelY - (badgeHeight / 2);
               const badgeRadius = Math.max(6, badgeHeight * 0.25);
               const contentStartX = badgeX + horizontalPadding;
-              const sourceIconX = contentStartX;
-              const sourceIconY = labelY - (sourceIconSize / 2);
-              const sourceIconScale = sourceIconSize / 24;
+              const sourceIconTranslateX = contentStartX - (16 * sourceIconScale);
+              const sourceIconTranslateY = labelY - (256 * sourceIconScale);
               const textX = showSourceIcon ? contentStartX + sourceIconSlot : labelX;
               const textAnchor = showSourceIcon ? "start" : "middle";
 
@@ -1621,11 +1621,11 @@ export class NovastarHSeriesCard extends LitElement {
                         ? svg`
                           <g
                             class=${layerClickable ? "layout-layer-hitbox" : ""}
-                            transform=${`translate(${sourceIconX} ${sourceIconY}) scale(${sourceIconScale})`}
+                            transform=${`translate(${sourceIconTranslateX} ${sourceIconTranslateY}) scale(${sourceIconScale})`}
                             @click=${layerClickable ? (event: Event) => this.openLayerSourceChooser(layerSourceRow, event) : nothing}
                           >
-                            <path d="M2 10 H11 V7 L16 12 L11 17 V14 H2 Z" fill=${labelFill}></path>
-                            <rect x="18.4" y="6" width="2.6" height="12" rx="1" ry="1" fill=${labelFill}></rect>
+                            <path d="M472 96H40a24.03 24.03 0 0 0-24 24v80h32v-72h416v256H48v-72H16v80a24.03 24.03 0 0 0 24 24h432a24.03 24.03 0 0 0 24-24V120a24.03 24.03 0 0 0-24-24" fill=${labelFill}></path>
+                            <path d="m212.687 323.078l22.626 22.627l90.511-90.509l-90.511-90.51l-22.626 22.628l51.881 51.882H16v31.999h248.569z" fill=${labelFill}></path>
                           </g>
                         `
                         : nothing}
