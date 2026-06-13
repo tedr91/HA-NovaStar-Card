@@ -751,8 +751,8 @@ export class NovastarHSeriesCard extends LitElement {
       --nova-info: #5ab4ff;
       --nova-warning: #f5a524;
       --nova-danger: #e5484d;
-      --nova-screen: #0b0c10;
-      --nova-layer: color-mix(in srgb, var(--nova-accent) 16%, #8e97a6);
+      --nova-screen: var(--nova-surface-2);
+      --nova-layer: #000000;
       --nova-radius: 16px;
       --nova-radius-sm: 14px;
       --nova-pill: 999px;
@@ -770,6 +770,7 @@ export class NovastarHSeriesCard extends LitElement {
       --nova-divider: var(--divider-color, rgba(120, 120, 120, 0.22));
       --nova-surface: var(--ha-card-background, var(--card-background-color, #ffffff));
       --nova-surface-2: color-mix(in srgb, var(--nova-surface) 84%, var(--nova-text) 16%);
+      --nova-screen: var(--nova-surface-2);
       --nova-success: var(--success-color, #43a047);
       --nova-info: var(--info-color, #4dabf5);
       --nova-warning: var(--warning-color, #f5a524);
