@@ -629,11 +629,11 @@ export class NovastarHSeriesCard extends LitElement {
       cursor: pointer;
       display: inline-flex;
       flex: none;
-      height: var(--nova-touch);
+      height: 38px;
       justify-content: center;
       padding: 0;
       transition: background 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.08s ease;
-      width: var(--nova-touch);
+      width: 38px;
       -webkit-tap-highlight-color: transparent;
     }
 
@@ -652,8 +652,8 @@ export class NovastarHSeriesCard extends LitElement {
 
     .power-button-icon {
       fill: currentColor;
-      height: 22px;
-      width: 22px;
+      height: 20px;
+      width: 20px;
     }
 
     .power-button--on {
@@ -680,28 +680,27 @@ export class NovastarHSeriesCard extends LitElement {
     .icon-button {
       align-items: center;
       background: transparent;
-      border: 1px solid var(--nova-divider);
+      border: none;
       border-radius: 50%;
       box-sizing: border-box;
       color: var(--nova-muted);
       cursor: pointer;
       display: inline-flex;
       flex: none;
-      height: var(--nova-touch);
+      height: 30px;
       justify-content: center;
       padding: 0;
-      transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.08s ease;
-      width: var(--nova-touch);
+      transition: color 0.2s ease, transform 0.08s ease;
+      width: 30px;
       -webkit-tap-highlight-color: transparent;
     }
 
     .icon-button:hover {
-      border-color: color-mix(in srgb, var(--nova-accent) 45%, var(--nova-divider));
       color: var(--nova-text);
     }
 
     .icon-button:active {
-      transform: scale(0.94);
+      transform: scale(0.9);
     }
 
     .icon-button:focus-visible {
@@ -714,16 +713,10 @@ export class NovastarHSeriesCard extends LitElement {
       pointer-events: none;
     }
 
-    .icon-button--active {
-      background: color-mix(in srgb, var(--nova-accent) 16%, transparent);
-      border-color: var(--nova-accent);
-      color: var(--nova-accent);
-    }
-
     .icon-button-icon {
       fill: currentColor;
-      height: 20px;
-      width: 20px;
+      height: 18px;
+      width: 18px;
     }
 
     .brightness-popover {
