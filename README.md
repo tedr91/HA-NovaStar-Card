@@ -15,8 +15,9 @@ https://github.com/tedr91/HA-novastar-h
 - Three display modes: Detailed, Standard (default), and Compact.
 - Apple TV-style power button, tappable preset chips, and an inline brightness control.
 - Interactive screen layout preview with per-layer source selection.
+- Reorderable card sections: rearrange the Presets and Layout preview blocks (and hide either) from the visual editor.
 - Displays a primary controller entity state, with optional status, brightness, and temperature entities.
-- Includes a visual Lovelace card editor in the dashboard UI.
+- Includes a visual Lovelace card editor (grouped into Visual, Card sections, and Advanced) in the dashboard UI.
 - Ships as a single HACS-distributed frontend module.
 
 ## Install via HACS
@@ -71,6 +72,12 @@ temperature_entity: sensor.novastar_h_series_temperature
 `show_card_version` options:
 - `false` (default): hide the card version.
 - `true`: show the card version at the bottom of the Detailed view.
+
+`show_presets` and `show_layout` options:
+- `true` (default): show the Presets section / Layout preview section on the card.
+- `false`: hide that section. In the visual editor each section has its own on/off toggle under **Card sections**.
+
+`section_order` (optional): controls the order of the card's reorderable body sections (`presets` and `layout`). In the visual editor, open **Card sections**, then use the three-dot menu on a section row to **Move up** / **Move down**. The same order is used in Detailed and Standard modes (the Detailed-mode status/temperature/brightness rows stay pinned at the top and the version footer stays at the bottom). Leave it unset to use the default order (presets, then layout). You can also set it directly in YAML, e.g. `section_order: [layout, presets]`.
 
 `screen_color` and `screen_background_color` (optional): customize the layout preview colors. `screen_color` sets the layer tone and `screen_background_color` sets the screen backdrop. Each accepts a Home Assistant theme color name (e.g. `blue`) or a hex value (e.g. `#202733`); leave unset to use the defaults. Both are most easily set with the color pickers in the visual editor.
 

@@ -24,6 +24,9 @@ type NovastarCardConfig = {
   theme?: ThemeMode;
   show_header_in_compact?: boolean;
   show_card_version?: boolean;
+  show_presets?: boolean;
+  show_layout?: boolean;
+  section_order?: string[];
   preset_order?: string[];
   preset_baseline?: string[];
   screen_color?: string;
@@ -92,6 +95,51 @@ type LayerSourceChooser = {
   options: string[];
   selectedOption: string;
 };
+
+// The card's reorderable content sections. The order shown here is the default;
+// the user can rearrange them in the editor (persisted as `section_order`), and
+// the card renders them in that order.
+type SectionId = "presets" | "layout";
+
+const SECTION_DEFS: Array<{ id: SectionId; label: string; icon: string }> = [
+  { id: "presets", label: "Presets", icon: "mdi:view-grid" },
+  { id: "layout", label: "Layout preview", icon: "mdi:monitor-dashboard" }
+];
+
+const DEFAULT_SECTION_ORDER: SectionId[] = SECTION_DEFS.map((section) => section.id);
+
+// Normalize a configured section order to always contain every known section
+// exactly once: keep configured ids that are valid, then append any missing in
+// their default order. Guarantees no section is ever dropped.
+function orderSections(configured: string[] | undefined): SectionId[] {
+  const result: SectionId[] = [];
+  const seen = new Set<string>();
+  if (Array.isArray(configured)) {
+    for (const id of configured) {
+      if (DEFAULT_SECTION_ORDER.includes(id as SectionId) && !seen.has(id)) {
+        result.push(id as SectionId);
+        seen.add(id);
+      }
+    }
+  }
+  for (const id of DEFAULT_SECTION_ORDER) {
+    if (!seen.has(id)) {
+      result.push(id);
+    }
+  }
+  return result;
+}
+
+// True when the newer Web-Awesome `ha-dropdown` component is registered. Mirrors
+// Bubble Card's detection so the reorder menu uses the modern dropdown when
+// available and falls back to `ha-button-menu` on older Home Assistant.
+function supportsHaDropdown(): boolean {
+  try {
+    return typeof customElements !== "undefined" && customElements.get("ha-dropdown") !== undefined;
+  } catch {
+    return false;
+  }
+}
 
 declare global {
   interface Window {
@@ -303,6 +351,33 @@ export class NovastarHSeriesCard extends LitElement {
     const temperatureSeverity = this.getTemperatureSeverity(temperatureEntity?.state);
     const layoutColorStyle = this.getLayoutColorStyle();
 
+    const showPresets = this.config.show_presets !== false;
+    const showLayout = this.config.show_layout !== false;
+    const sectionOrder = orderSections(this.config.section_order);
+    const renderSection = (id: SectionId) => {
+      if (id === "presets") {
+        return !isCompact && presetEntity && showPresets
+          ? this.renderPresetArea(visiblePresets, selectedPresetOption, powerFadeToBlack, isDetailed, presetEntity)
+          : nothing;
+      }
+
+      if (!showLayout) {
+        return nothing;
+      }
+      return layoutPayload
+        ? isDetailed
+          ? html`
+              <div class="layout-area">
+                <div class="preset-heading">Layout and Inputs</div>
+                ${this.renderLayoutPreview(layoutPayload, bareLayoutMode)}
+              </div>
+            `
+          : this.renderLayoutPreview(layoutPayload, bareLayoutMode)
+        : isCompact
+          ? html`<div class="row"><span class="label">Layout</span><span class="value">Unavailable</span></div>`
+          : nothing;
+    };
+
     return html`
       <ha-card
         class="ted-card ted-card--${displayMode} ted-card--theme-${themeMode} ${powerIsOn ? "is-on" : "is-off"}"
@@ -382,21 +457,7 @@ export class NovastarHSeriesCard extends LitElement {
                   : nothing}
               `
             : nothing}
-          ${!isCompact && presetEntity
-            ? this.renderPresetArea(visiblePresets, selectedPresetOption, powerFadeToBlack, isDetailed, presetEntity)
-            : nothing}
-          ${layoutPayload
-            ? isDetailed
-              ? html`
-                  <div class="layout-area">
-                    <div class="preset-heading">Layout and Inputs</div>
-                    ${this.renderLayoutPreview(layoutPayload, bareLayoutMode)}
-                  </div>
-                `
-              : this.renderLayoutPreview(layoutPayload, bareLayoutMode)
-            : isCompact
-              ? html`<div class="row"><span class="label">Layout</span><span class="value">Unavailable</span></div>`
-              : nothing}
+          ${sectionOrder.map((id) => renderSection(id))}
           ${isDetailed && this.config.show_card_version === true ? this.renderVersionFooter() : nothing}
         </div>
         ${this.presetChooserOpen && presetEntity && visiblePresets.length > 0
@@ -2622,6 +2683,8 @@ const NOVASTAR_EDITOR_FIELD_LABELS: Record<string, string> = {
   theme: "Theme styling",
   show_header_in_compact: "Show header in Compact mode",
   show_card_version: "Show card version",
+  show_presets: "Show presets",
+  show_layout: "Show layout preview",
   preset_order: "Preset order",
   screen_color: "Screen color",
   screen_background_color: "Screen background color",
@@ -2648,6 +2711,7 @@ class NovastarHSeriesCardEditor extends LitElement {
   private resolvedPresetEntityId?: string;
   private resolvingPresetKey?: string;
   private presetsResetNotice = false;
+  private expandedPanels: Record<string, boolean> = {};
 
   static properties = {
     hass: { attribute: false },
@@ -2675,40 +2739,199 @@ class NovastarHSeriesCardEditor extends LitElement {
     const data: NovastarCardConfig = {
       display_mode: "standard",
       theme: "ted-style",
+      show_presets: true,
+      show_layout: true,
       ...this.config
     };
+    const sectionOrder = orderSections(this.config.section_order);
 
+    return html`
+      <div class="editor">
+        <ha-form
+          .hass=${this.hass}
+          .data=${data}
+          .schema=${this.baseSchema()}
+          .computeLabel=${this.computeLabel}
+          @value-changed=${this.handleFormChanged}
+        ></ha-form>
+
+        ${this.renderGroup("visual", "Visual", "mdi:palette", false, html`
+          <ha-form
+            .hass=${this.hass}
+            .data=${data}
+            .schema=${this.visualSchema()}
+            .computeLabel=${this.computeLabel}
+            @value-changed=${this.handleFormChanged}
+          ></ha-form>
+        `)}
+
+        ${this.renderGroup("sections", "Card sections", "mdi:view-dashboard-outline", true, html`
+          <div class="section-list">
+            ${sectionOrder.map((id, index) => this.renderSectionRow(id, index, sectionOrder.length, data))}
+          </div>
+        `)}
+
+        ${this.renderGroup("advanced", "Advanced", "mdi:cog", false, html`
+          <ha-form
+            .hass=${this.hass}
+            .data=${data}
+            .schema=${this.advancedSchema()}
+            .computeLabel=${this.computeLabel}
+            @value-changed=${this.handleFormChanged}
+          ></ha-form>
+        `)}
+      </div>
+    `;
+  }
+
+  // A collapsible top-level group (Visual / Card sections / Advanced).
+  private renderGroup(key: string, title: string, icon: string, defaultExpanded: boolean, content: unknown) {
+    return html`
+      <ha-expansion-panel
+        outlined
+        .expanded=${this.isPanelExpanded(key, defaultExpanded)}
+        @expanded-changed=${(event: Event) => this.handlePanelToggle(key, event)}
+      >
+        <div slot="header" class="panel-header">
+          <ha-icon icon=${icon}></ha-icon>
+          <span>${title}</span>
+        </div>
+        <div class="panel-content">${content}</div>
+      </ha-expansion-panel>
+    `;
+  }
+
+  // One reorderable section row inside "Card sections".
+  private renderSectionRow(id: SectionId, index: number, total: number, data: NovastarCardConfig) {
+    const def = SECTION_DEFS.find((section) => section.id === id);
+    const key = `section-${id}`;
+    const settings = id === "presets"
+      ? this.presetsSectionContent(data)
+      : this.layoutSectionContent(data);
+
+    return html`
+      <ha-expansion-panel
+        outlined
+        .expanded=${this.isPanelExpanded(key, false)}
+        @expanded-changed=${(event: Event) => this.handlePanelToggle(key, event)}
+      >
+        <div slot="header" class="section-row-header">
+          <ha-icon icon=${def?.icon ?? "mdi:tune"}></ha-icon>
+          <span class="section-row-title">${def?.label ?? id}</span>
+          ${this.renderSectionMenu(id, index, total)}
+        </div>
+        <div class="panel-content">${settings}</div>
+      </ha-expansion-panel>
+    `;
+  }
+
+  // The three-dot reorder menu for a section row. Items stay hidden inside a
+  // popup until the trigger is clicked, matching Bubble Card's sub-button menu
+  // (ha-dropdown on newer HA, ha-button-menu + mwc-list-item as a fallback).
+  private renderSectionMenu(id: SectionId, index: number, total: number) {
+    const upDisabled = index === 0;
+    const downDisabled = index === total - 1;
+    const trigger = html`
+      <ha-icon-button slot="trigger" label="Reorder section">
+        <ha-icon icon="mdi:dots-vertical"></ha-icon>
+      </ha-icon-button>
+    `;
+
+    if (supportsHaDropdown()) {
+      return html`
+        <ha-dropdown
+          @click=${this.stopPropagation}
+          @closed=${this.stopPropagation}
+        >
+          ${trigger}
+          <ha-dropdown-item ?disabled=${upDisabled} @click=${() => this.moveSection(id, -1)}>
+            <ha-icon slot="icon" icon="mdi:arrow-up"></ha-icon>
+            Move up
+          </ha-dropdown-item>
+          <ha-dropdown-item ?disabled=${downDisabled} @click=${() => this.moveSection(id, 1)}>
+            <ha-icon slot="icon" icon="mdi:arrow-down"></ha-icon>
+            Move down
+          </ha-dropdown-item>
+        </ha-dropdown>
+      `;
+    }
+
+    return html`
+      <ha-button-menu
+        corner="BOTTOM_START"
+        menuCorner="START"
+        fixed
+        @click=${this.stopPropagation}
+        @closed=${this.stopPropagation}
+      >
+        ${trigger}
+        <mwc-list-item graphic="icon" ?disabled=${upDisabled} @click=${() => this.moveSection(id, -1)}>
+          <ha-icon slot="graphic" icon="mdi:arrow-up"></ha-icon>
+          Move up
+        </mwc-list-item>
+        <mwc-list-item graphic="icon" ?disabled=${downDisabled} @click=${() => this.moveSection(id, 1)}>
+          <ha-icon slot="graphic" icon="mdi:arrow-down"></ha-icon>
+          Move down
+        </mwc-list-item>
+      </ha-button-menu>
+    `;
+  }
+
+  private presetsSectionContent(data: NovastarCardConfig) {
+    const schema: Array<Record<string, unknown>> = [
+      { name: "show_presets", selector: { boolean: {} } }
+    ];
+    if (this.config.show_presets !== false && this.presetOptions.length > 0) {
+      schema.push({
+        name: "preset_order",
+        selector: {
+          select: {
+            multiple: true,
+            reorder: true,
+            options: this.presetOptions.map((preset) => ({ value: preset, label: preset }))
+          }
+        }
+      });
+    }
     return html`
       <ha-form
         .hass=${this.hass}
         .data=${data}
-        .schema=${this.buildSchema()}
+        .schema=${schema}
         .computeLabel=${this.computeLabel}
         .computeHelper=${this.computeHelper}
-        @value-changed=${this.handleValueChanged}
+        @value-changed=${this.handleFormChanged}
       ></ha-form>
     `;
   }
 
-  private buildSchema(): Array<Record<string, unknown>> {
-    const displayMode = this.config.display_mode ?? "standard";
-    const hasOverride = Boolean(
-      this.config.power_entity
-      || this.config.preset_entity
-      || this.config.screens_entity
-      || this.config.layers_entity
-      || this.config.controller_entity
-      || this.config.status_entity
-      || this.config.brightness_entity
-      || this.config.temperature_entity
-    );
-
+  private layoutSectionContent(data: NovastarCardConfig) {
     const schema: Array<Record<string, unknown>> = [
+      { name: "show_layout", selector: { boolean: {} } }
+    ];
+    return html`
+      <ha-form
+        .hass=${this.hass}
+        .data=${data}
+        .schema=${schema}
+        .computeLabel=${this.computeLabel}
+        @value-changed=${this.handleFormChanged}
+      ></ha-form>
+    `;
+  }
+
+  private baseSchema(): Array<Record<string, unknown>> {
+    return [
       { name: "header", selector: { text: { placeholder: "Novastar H Series" } } },
       {
         name: "device_id",
         selector: { device: { filter: { integration: "novastar_h" } } }
-      },
+      }
+    ];
+  }
+
+  private visualSchema(): Array<Record<string, unknown>> {
+    return [
       {
         name: "display_mode",
         required: true,
@@ -2745,6 +2968,22 @@ class NovastarHSeriesCardEditor extends LitElement {
         selector: { ui_color: {} }
       }
     ];
+  }
+
+  private advancedSchema(): Array<Record<string, unknown>> {
+    const displayMode = this.config.display_mode ?? "standard";
+    const hasOverride = Boolean(
+      this.config.power_entity
+      || this.config.preset_entity
+      || this.config.screens_entity
+      || this.config.layers_entity
+      || this.config.controller_entity
+      || this.config.status_entity
+      || this.config.brightness_entity
+      || this.config.temperature_entity
+    );
+
+    const schema: Array<Record<string, unknown>> = [];
 
     if (displayMode === "compact") {
       schema.push({ name: "show_header_in_compact", selector: { boolean: {} } });
@@ -2752,19 +2991,6 @@ class NovastarHSeriesCardEditor extends LitElement {
 
     if (displayMode === "detailed") {
       schema.push({ name: "show_card_version", selector: { boolean: {} } });
-    }
-
-    if (this.presetOptions.length > 0) {
-      schema.push({
-        name: "preset_order",
-        selector: {
-          select: {
-            multiple: true,
-            reorder: true,
-            options: this.presetOptions.map((preset) => ({ value: preset, label: preset }))
-          }
-        }
-      });
     }
 
     schema.push({
@@ -2807,10 +3033,43 @@ class NovastarHSeriesCardEditor extends LitElement {
       : base;
   };
 
-  private handleValueChanged = (event: CustomEvent<{ value: NovastarCardConfig }>): void => {
+  private handleFormChanged = (event: CustomEvent<{ value: NovastarCardConfig }>): void => {
     event.stopPropagation();
+    this.commitConfig({ ...event.detail.value });
+  };
 
-    const nextConfig: NovastarCardConfig = { ...event.detail.value };
+  private stopPropagation = (event: Event): void => {
+    event.stopPropagation();
+  };
+
+  private isPanelExpanded(key: string, defaultExpanded: boolean): boolean {
+    return key in this.expandedPanels ? this.expandedPanels[key] : defaultExpanded;
+  }
+
+  private handlePanelToggle(key: string, event: Event): void {
+    const expanded = (event.target as { expanded?: boolean } | null)?.expanded;
+    if (typeof expanded === "boolean") {
+      this.expandedPanels = { ...this.expandedPanels, [key]: expanded };
+    }
+  }
+
+  private moveSection(id: SectionId, direction: -1 | 1): void {
+    const order = orderSections(this.config.section_order);
+    const index = order.indexOf(id);
+    const target = index + direction;
+    if (index < 0 || target < 0 || target >= order.length) {
+      return;
+    }
+    const next = [...order];
+    [next[index], next[target]] = [next[target], next[index]];
+    this.commitConfig({ ...this.config, section_order: next });
+  }
+
+  // Normalize a candidate config (strip defaults/empties), reconcile the preset
+  // order, store it, and notify HA. Shared by every editor form and by the
+  // section reorder menu.
+  private commitConfig(rawConfig: NovastarCardConfig): void {
+    const nextConfig: NovastarCardConfig = { ...rawConfig };
     nextConfig.type = "custom:novastar-h-series-card";
 
     if (nextConfig.display_mode === "standard") {
@@ -2824,6 +3083,18 @@ class NovastarHSeriesCardEditor extends LitElement {
     }
     if (nextConfig.show_card_version !== true) {
       delete nextConfig.show_card_version;
+    }
+    if (nextConfig.show_presets !== false) {
+      delete nextConfig.show_presets;
+    }
+    if (nextConfig.show_layout !== false) {
+      delete nextConfig.show_layout;
+    }
+    if (
+      !Array.isArray(nextConfig.section_order)
+      || this.listSequenceEqual(orderSections(nextConfig.section_order), DEFAULT_SECTION_ORDER)
+    ) {
+      delete nextConfig.section_order;
     }
 
     this.reconcilePresetOrder(nextConfig);
@@ -2848,6 +3119,7 @@ class NovastarHSeriesCardEditor extends LitElement {
     }
 
     this.config = nextConfig;
+    this.requestUpdate();
     this.dispatchEvent(
       new CustomEvent("config-changed", {
         detail: { config: nextConfig },
@@ -2855,7 +3127,7 @@ class NovastarHSeriesCardEditor extends LitElement {
         composed: true
       })
     );
-  };
+  }
 
   private reconcilePresetOrder(nextConfig: NovastarCardConfig): void {
     if (this.presetOptions.length === 0) {
@@ -3076,8 +3348,69 @@ class NovastarHSeriesCardEditor extends LitElement {
   }
 
   static styles = css`
+    .editor {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
     ha-form {
       display: block;
+    }
+
+    ha-expansion-panel {
+      --expansion-panel-content-padding: 0;
+      border-radius: 6px;
+    }
+
+    .panel-header {
+      align-items: center;
+      display: flex;
+      font-weight: 500;
+      gap: 10px;
+    }
+
+    .panel-header ha-icon {
+      color: var(--secondary-text-color);
+    }
+
+    .panel-content {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding: 12px 16px 16px;
+    }
+
+    .section-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .section-row-header {
+      align-items: center;
+      display: flex;
+      gap: 10px;
+      width: 100%;
+    }
+
+    .section-row-header ha-icon {
+      color: var(--secondary-text-color);
+      flex: none;
+    }
+
+    .section-row-title {
+      flex: 1 1 auto;
+      font-weight: 500;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .section-row-header ha-button-menu,
+    .section-row-header ha-dropdown {
+      flex: none;
+      margin: -8px 0;
     }
   `;
 }
