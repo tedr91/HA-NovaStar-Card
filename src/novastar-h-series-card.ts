@@ -15,7 +15,7 @@ type HomeAssistant = {
 
 type DisplayMode = "detailed" | "standard" | "compact";
 
-type ThemeMode = "nova" | "ha";
+type ThemeMode = "ted-style" | "ha";
 
 type NovastarCardConfig = {
   type: string;
@@ -169,13 +169,13 @@ export class NovastarHSeriesCard extends LitElement {
   private syncChooserPopovers(): void {
     const root = this.renderRoot as ShadowRoot;
 
-    const presetPopover = root.getElementById("nova-preset-popover") as (HTMLElement & { showPopover?: () => void }) | null;
+    const presetPopover = root.getElementById("ted-preset-popover") as (HTMLElement & { showPopover?: () => void }) | null;
     if (presetPopover && this.presetChooserOpen && !presetPopover.matches(":popover-open")) {
       presetPopover.showPopover?.();
       this.positionChooserPopover(presetPopover, this.presetAnchorRect);
     }
 
-    const layerPopover = root.getElementById("nova-layer-popover") as (HTMLElement & { showPopover?: () => void }) | null;
+    const layerPopover = root.getElementById("ted-layer-popover") as (HTMLElement & { showPopover?: () => void }) | null;
     if (layerPopover && this.activeLayerSourceChooser && !layerPopover.matches(":popover-open")) {
       layerPopover.showPopover?.();
       this.positionChooserPopover(layerPopover, this.layerAnchorRect);
@@ -305,7 +305,7 @@ export class NovastarHSeriesCard extends LitElement {
 
     return html`
       <ha-card
-        class="nova-card nova-card--${displayMode} nova-card--theme-${themeMode} ${powerIsOn ? "is-on" : "is-off"}"
+        class="ted-card ted-card--${displayMode} ted-card--theme-${themeMode} ${powerIsOn ? "is-on" : "is-off"}"
         style=${layoutColorStyle}
       >
         ${showHeader
@@ -416,7 +416,7 @@ export class NovastarHSeriesCard extends LitElement {
   }
 
   private getThemeMode(): ThemeMode {
-    return this.config?.theme === "ha" ? "ha" : "nova";
+    return this.config?.theme === "ha" ? "ha" : "ted-style";
   }
 
   private getTemperatureSeverity(state: string | undefined): "normal" | "warning" | "critical" | "unknown" {
@@ -460,11 +460,11 @@ export class NovastarHSeriesCard extends LitElement {
     const declarations: string[] = [];
     const layerColor = this.resolveConfigColor(this.config?.screen_color);
     if (layerColor) {
-      declarations.push(`--nova-layer: ${layerColor};`);
+      declarations.push(`--ted-theater-layer: ${layerColor};`);
     }
     const backgroundColor = this.resolveConfigColor(this.config?.screen_background_color);
     if (backgroundColor) {
-      declarations.push(`--nova-screen: ${backgroundColor};`);
+      declarations.push(`--ted-theater-screen: ${backgroundColor};`);
     }
     return declarations.join(" ");
   }
@@ -504,8 +504,8 @@ export class NovastarHSeriesCard extends LitElement {
       <button
         type="button"
         class="icon-button"
-        id="nova-brightness-anchor"
-        popovertarget="nova-brightness-popover"
+        id="ted-brightness-anchor"
+        popovertarget="ted-brightness-popover"
         aria-label="Adjust brightness"
         title="Adjust brightness"
         ?disabled=${disabled}
@@ -517,7 +517,7 @@ export class NovastarHSeriesCard extends LitElement {
         </svg>
       </button>
       <div
-        id="nova-brightness-popover"
+        id="ted-brightness-popover"
         class="brightness-popover"
         popover
         @beforetoggle=${this.handleBrightnessPopoverToggle}
@@ -531,7 +531,7 @@ export class NovastarHSeriesCard extends LitElement {
           max=${max}
           step=${step}
           data-unit=${unit}
-          style=${`--nova-brightness-fill:${percent}%`}
+          style=${`--ted-theater-brightness-fill:${percent}%`}
           .value=${String(value)}
           .disabled=${disabled}
           ?disabled=${disabled}
@@ -555,8 +555,8 @@ export class NovastarHSeriesCard extends LitElement {
     }
 
     const root = this.renderRoot as ShadowRoot;
-    const anchor = root.getElementById("nova-brightness-anchor");
-    const popover = root.getElementById("nova-brightness-popover");
+    const anchor = root.getElementById("ted-brightness-anchor");
+    const popover = root.getElementById("ted-brightness-popover");
     if (!anchor || !popover) {
       return;
     }
@@ -580,7 +580,7 @@ export class NovastarHSeriesCard extends LitElement {
     const hi = Number.isFinite(max) ? max : 100;
     const span = (hi - lo) || 1;
     const percent = Math.max(0, Math.min(100, Math.round(((value - lo) / span) * 100)));
-    input.style.setProperty("--nova-brightness-fill", `${percent}%`);
+    input.style.setProperty("--ted-theater-brightness-fill", `${percent}%`);
 
     const popover = input.closest(".brightness-popover");
     const readout = popover?.querySelector(".brightness-popover-value");
@@ -602,7 +602,7 @@ export class NovastarHSeriesCard extends LitElement {
     const percent = Math.max(0, Math.min(100, Math.round(((value - min) / span) * 100)));
     const readout = unit ? `${Math.round(value)}${unit}` : `${percent}%`;
     return html`
-      <div class="brightness-control" style=${`--nova-brightness-fill:${percent}%`}>
+      <div class="brightness-control" style=${`--ted-theater-brightness-fill:${percent}%`}>
         <svg class="brightness-icon" viewBox="0 0 24 24" aria-hidden="true">
           <path
             d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zm0-6a1 1 0 0 1 1 1v1.5a1 1 0 1 1-2 0V3a1 1 0 0 1 1-1zm0 16.5a1 1 0 0 1 1 1V21a1 1 0 1 1-2 0v-1.5a1 1 0 0 1 1-1zM4.93 4.93a1 1 0 0 1 1.41 0l1.06 1.06A1 1 0 0 1 5.99 7.4L4.93 6.34a1 1 0 0 1 0-1.41zm11.67 11.67a1 1 0 0 1 1.41 0l1.06 1.06a1 1 0 0 1-1.41 1.41l-1.06-1.06a1 1 0 0 1 0-1.41zM2 12a1 1 0 0 1 1-1h1.5a1 1 0 1 1 0 2H3a1 1 0 0 1-1-1zm17.5 0a1 1 0 0 1 1-1H22a1 1 0 1 1 0 2h-1.5a1 1 0 0 1-1-1zM4.93 19.07a1 1 0 0 1 0-1.41l1.06-1.06a1 1 0 1 1 1.41 1.41l-1.06 1.06a1 1 0 0 1-1.41 0zM16.6 7.4a1 1 0 0 1 0-1.41l1.06-1.06a1 1 0 1 1 1.41 1.41L18.01 7.4a1 1 0 0 1-1.41 0z"
@@ -687,17 +687,17 @@ export class NovastarHSeriesCard extends LitElement {
   private renderPresetChooser(options: string[], selected: string, disabled: boolean) {
     return html`
       <div
-        id="nova-preset-popover"
-        class="nova-popover"
+        id="ted-preset-popover"
+        class="ted-popover"
         popover
         @toggle=${this.handlePresetPopoverToggle}
       >
-        <div class="nova-popover-title">Select Preset</div>
-        <div class="nova-popover-options">
+        <div class="ted-popover-title">Select Preset</div>
+        <div class="ted-popover-options">
           ${options.map((option) => html`
             <button
               type="button"
-              class="nova-popover-option ${this.optionEquals(option, selected) ? "selected" : ""}"
+              class="ted-popover-option ${this.optionEquals(option, selected) ? "selected" : ""}"
               ?disabled=${disabled}
               @click=${() => this.handlePresetChooserOptionClick(option)}
             >${option}</button>
@@ -739,44 +739,47 @@ export class NovastarHSeriesCard extends LitElement {
 
   static styles = css`
     :host {
-      /* Nova design language — the default look (independent of the HA theme) */
-      --nova-accent: #3d8bfd;
-      --nova-on-accent: #ffffff;
-      --nova-text: #e8ecf3;
-      --nova-muted: #93a0b5;
-      --nova-divider: rgba(255, 255, 255, 0.12);
-      --nova-surface: #1c2130;
-      --nova-surface-2: #262c3c;
-      --nova-success: #41b85f;
-      --nova-info: #5ab4ff;
-      --nova-warning: #f5a524;
-      --nova-danger: #e5484d;
-      --nova-screen: var(--nova-surface-2);
-      --nova-layer: #000000;
-      --nova-radius: 16px;
-      --nova-radius-sm: 14px;
-      --nova-pill: 999px;
-      --nova-gap: 14px;
-      --nova-touch: 44px;
+      /* "Ted's Home Theater" theme — Windows 11 Fluent (Mica dark).
+         Mirrors tedr91/ha-windows11-theme's dark token set. */
+      --ted-theater-accent: #4cc2ff;
+      --ted-theater-on-accent: #000000;
+      --ted-theater-text: #ffffff;
+      --ted-theater-muted: rgba(255, 255, 255, 0.786);
+      --ted-theater-divider: rgba(255, 255, 255, 0.0931);
+      --ted-theater-surface: #2b2b2b;
+      --ted-theater-surface-2: #383838;
+      --ted-theater-success: #6ccb5f;
+      --ted-theater-info: #5ab4ff;
+      --ted-theater-warning: #f5a524;
+      --ted-theater-danger: #ff99a4;
+      --ted-theater-screen: var(--ted-theater-surface-2);
+      --ted-theater-layer: #000000;
+      --ted-theater-radius: 8px;
+      --ted-theater-radius-sm: 4px;
+      --ted-theater-pill: 999px;
+      --ted-theater-gap: 14px;
+      --ted-theater-touch: 44px;
       display: block;
+      font-family: "Segoe UI Variable Text", "Segoe UI Variable", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
     }
 
     /* theme: ha — follow the Home Assistant theme instead */
-    .nova-card--theme-ha {
-      --nova-accent: var(--primary-color, #2196f3);
-      --nova-on-accent: var(--text-primary-color, #ffffff);
-      --nova-text: var(--primary-text-color, #1c1c1c);
-      --nova-muted: var(--secondary-text-color, #6f6f6f);
-      --nova-divider: var(--divider-color, rgba(120, 120, 120, 0.22));
-      --nova-surface: var(--ha-card-background, var(--card-background-color, #ffffff));
-      --nova-surface-2: color-mix(in srgb, var(--nova-surface) 84%, var(--nova-text) 16%);
-      --nova-screen: var(--nova-surface-2);
-      --nova-success: var(--success-color, #43a047);
-      --nova-info: var(--info-color, #4dabf5);
-      --nova-warning: var(--warning-color, #f5a524);
-      --nova-danger: var(--error-color, #e5484d);
-      --nova-radius: var(--ha-card-border-radius, 12px);
-      --nova-radius-sm: min(var(--ha-card-border-radius, 12px), 14px);
+    .ted-card--theme-ha {
+      --ted-theater-accent: var(--primary-color, #2196f3);
+      --ted-theater-on-accent: var(--text-primary-color, #ffffff);
+      --ted-theater-text: var(--primary-text-color, #1c1c1c);
+      --ted-theater-muted: var(--secondary-text-color, #6f6f6f);
+      --ted-theater-divider: var(--divider-color, rgba(120, 120, 120, 0.22));
+      --ted-theater-surface: var(--ha-card-background, var(--card-background-color, #ffffff));
+      --ted-theater-surface-2: color-mix(in srgb, var(--ted-theater-surface) 84%, var(--ted-theater-text) 16%);
+      --ted-theater-screen: var(--ted-theater-surface-2);
+      --ted-theater-success: var(--success-color, #43a047);
+      --ted-theater-info: var(--info-color, #4dabf5);
+      --ted-theater-warning: var(--warning-color, #f5a524);
+      --ted-theater-danger: var(--error-color, #e5484d);
+      --ted-theater-radius: var(--ha-card-border-radius, 12px);
+      --ted-theater-radius-sm: var(--ha-border-radius-sm, min(var(--ha-card-border-radius, 12px), 14px));
+      font-family: var(--ha-font-family-body, var(--paper-font-body1_-_font-family, inherit));
     }
 
     ha-card {
@@ -784,18 +787,18 @@ export class NovastarHSeriesCard extends LitElement {
       position: relative;
     }
 
-    /* Nova mode paints its own card surface so it looks identical under any HA theme */
-    ha-card.nova-card--theme-nova {
-      background: var(--nova-surface);
-      border: 1px solid var(--nova-divider);
-      color: var(--nova-text);
-      --ha-card-border-radius: var(--nova-radius);
+    /* Ted's Home Theater mode paints its own card surface so it looks identical under any HA theme */
+    ha-card.ted-card--theme-ted-style {
+      background: var(--ted-theater-surface);
+      border: 1px solid var(--ted-theater-divider);
+      color: var(--ted-theater-text);
+      --ha-card-border-radius: var(--ted-theater-radius);
     }
 
     .header-row {
       align-items: center;
       display: flex;
-      gap: var(--nova-gap);
+      gap: var(--ted-theater-gap);
       justify-content: space-between;
       padding: 16px 16px 4px;
     }
@@ -833,41 +836,41 @@ export class NovastarHSeriesCard extends LitElement {
     }
 
     .status-dot--on {
-      background: var(--nova-success);
-      box-shadow: 0 0 8px color-mix(in srgb, var(--nova-success) 70%, transparent);
+      background: var(--ted-theater-success);
+      box-shadow: 0 0 8px color-mix(in srgb, var(--ted-theater-success) 70%, transparent);
     }
 
     .status-dot--off {
-      background: color-mix(in srgb, var(--nova-muted) 55%, transparent);
+      background: color-mix(in srgb, var(--ted-theater-muted) 55%, transparent);
     }
 
     .status-dot--temp-normal {
-      background: var(--nova-info);
-      box-shadow: 0 0 8px color-mix(in srgb, var(--nova-info) 70%, transparent);
+      background: var(--ted-theater-info);
+      box-shadow: 0 0 8px color-mix(in srgb, var(--ted-theater-info) 70%, transparent);
     }
 
     .status-dot--temp-warning {
-      background: var(--nova-warning);
-      box-shadow: 0 0 8px color-mix(in srgb, var(--nova-warning) 70%, transparent);
+      background: var(--ted-theater-warning);
+      box-shadow: 0 0 8px color-mix(in srgb, var(--ted-theater-warning) 70%, transparent);
     }
 
     .status-dot--temp-critical {
-      background: var(--nova-danger);
-      box-shadow: 0 0 8px color-mix(in srgb, var(--nova-danger) 70%, transparent);
+      background: var(--ted-theater-danger);
+      box-shadow: 0 0 8px color-mix(in srgb, var(--ted-theater-danger) 70%, transparent);
     }
 
     .status-dot--temp-unknown {
-      background: color-mix(in srgb, var(--nova-muted) 55%, transparent);
+      background: color-mix(in srgb, var(--ted-theater-muted) 55%, transparent);
     }
 
     .power-button {
       align-items: center;
-      background: var(--nova-surface-2);
-      border: 1px solid var(--nova-divider);
+      background: var(--ted-theater-surface-2);
+      border: 1px solid var(--ted-theater-divider);
       border-radius: 50%;
       box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
       box-sizing: border-box;
-      color: color-mix(in srgb, var(--nova-text) 60%, transparent);
+      color: color-mix(in srgb, var(--ted-theater-text) 60%, transparent);
       cursor: pointer;
       display: inline-flex;
       flex: none;
@@ -880,7 +883,7 @@ export class NovastarHSeriesCard extends LitElement {
     }
 
     .power-button:hover {
-      border-color: color-mix(in srgb, var(--nova-accent) 45%, var(--nova-divider));
+      border-color: color-mix(in srgb, var(--ted-theater-accent) 45%, var(--ted-theater-divider));
     }
 
     .power-button:active {
@@ -888,7 +891,7 @@ export class NovastarHSeriesCard extends LitElement {
     }
 
     .power-button:focus-visible {
-      outline: 2px solid var(--nova-accent);
+      outline: 2px solid var(--ted-theater-accent);
       outline-offset: 2px;
     }
 
@@ -901,15 +904,15 @@ export class NovastarHSeriesCard extends LitElement {
     .power-button--on {
       background:
         radial-gradient(circle at 30% 26%,
-          color-mix(in srgb, var(--nova-accent) 76%, #ffffff) 8%,
-          color-mix(in srgb, var(--nova-accent) 90%, #000000) 100%);
-      border-color: color-mix(in srgb, var(--nova-accent) 55%, #ffffff);
+          color-mix(in srgb, var(--ted-theater-accent) 76%, #ffffff) 8%,
+          color-mix(in srgb, var(--ted-theater-accent) 90%, #000000) 100%);
+      border-color: color-mix(in srgb, var(--ted-theater-accent) 55%, #ffffff);
       box-shadow:
-        0 0 0 1px color-mix(in srgb, var(--nova-accent) 35%, transparent),
-        0 0 16px color-mix(in srgb, var(--nova-accent) 38%, transparent),
+        0 0 0 1px color-mix(in srgb, var(--ted-theater-accent) 35%, transparent),
+        0 0 16px color-mix(in srgb, var(--ted-theater-accent) 38%, transparent),
         0 2px 8px rgba(0, 0, 0, 0.28),
         inset 0 1px 0 rgba(255, 255, 255, 0.28);
-      color: var(--nova-on-accent);
+      color: var(--ted-theater-on-accent);
     }
 
     .header-actions {
@@ -925,7 +928,7 @@ export class NovastarHSeriesCard extends LitElement {
       border: none;
       border-radius: 50%;
       box-sizing: border-box;
-      color: var(--nova-muted);
+      color: var(--ted-theater-muted);
       cursor: pointer;
       display: inline-flex;
       flex: none;
@@ -939,7 +942,7 @@ export class NovastarHSeriesCard extends LitElement {
     }
 
     .icon-button:hover {
-      color: var(--nova-text);
+      color: var(--ted-theater-text);
     }
 
     .icon-button:active {
@@ -947,7 +950,7 @@ export class NovastarHSeriesCard extends LitElement {
     }
 
     .icon-button:focus-visible {
-      outline: 2px solid var(--nova-accent);
+      outline: 2px solid var(--ted-theater-accent);
       outline-offset: 2px;
     }
 
@@ -963,9 +966,9 @@ export class NovastarHSeriesCard extends LitElement {
     }
 
     .brightness-popover {
-      background: var(--nova-surface);
-      border: 1px solid var(--nova-divider);
-      border-radius: var(--nova-radius-sm);
+      background: var(--ted-theater-surface);
+      border: 1px solid var(--ted-theater-divider);
+      border-radius: var(--ted-theater-radius-sm);
       box-shadow: 0 18px 48px rgba(0, 0, 0, 0.45);
       box-sizing: border-box;
       inset: auto;
@@ -986,13 +989,13 @@ export class NovastarHSeriesCard extends LitElement {
     }
 
     .brightness-popover-value {
-      color: var(--nova-text);
+      color: var(--ted-theater-text);
       font-size: 0.85rem;
       font-weight: 600;
     }
 
     .brightness-popover-icon {
-      color: var(--nova-muted);
+      color: var(--ted-theater-muted);
       fill: currentColor;
       height: 18px;
       width: 18px;
@@ -1012,20 +1015,20 @@ export class NovastarHSeriesCard extends LitElement {
     .brightness-slider-vertical::-webkit-slider-runnable-track {
       background: linear-gradient(
         to top,
-        var(--nova-accent) 0%,
-        var(--nova-accent) var(--nova-brightness-fill, 50%),
-        color-mix(in srgb, var(--nova-text) 18%, transparent) var(--nova-brightness-fill, 50%),
-        color-mix(in srgb, var(--nova-text) 18%, transparent) 100%
+        var(--ted-theater-accent) 0%,
+        var(--ted-theater-accent) var(--ted-theater-brightness-fill, 50%),
+        color-mix(in srgb, var(--ted-theater-text) 18%, transparent) var(--ted-theater-brightness-fill, 50%),
+        color-mix(in srgb, var(--ted-theater-text) 18%, transparent) 100%
       );
-      border-radius: var(--nova-pill);
+      border-radius: var(--ted-theater-pill);
       width: 6px;
     }
 
     .brightness-slider-vertical::-webkit-slider-thumb {
       -webkit-appearance: none;
       appearance: none;
-      background: var(--nova-surface);
-      border: 1px solid color-mix(in srgb, var(--nova-text) 20%, transparent);
+      background: var(--ted-theater-surface);
+      border: 1px solid color-mix(in srgb, var(--ted-theater-text) 20%, transparent);
       border-radius: 50%;
       box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
       height: 22px;
@@ -1034,20 +1037,20 @@ export class NovastarHSeriesCard extends LitElement {
     }
 
     .brightness-slider-vertical::-moz-range-track {
-      background: color-mix(in srgb, var(--nova-text) 18%, transparent);
-      border-radius: var(--nova-pill);
+      background: color-mix(in srgb, var(--ted-theater-text) 18%, transparent);
+      border-radius: var(--ted-theater-pill);
       width: 6px;
     }
 
     .brightness-slider-vertical::-moz-range-progress {
-      background: var(--nova-accent);
-      border-radius: var(--nova-pill);
+      background: var(--ted-theater-accent);
+      border-radius: var(--ted-theater-pill);
       width: 6px;
     }
 
     .brightness-slider-vertical::-moz-range-thumb {
-      background: var(--nova-surface);
-      border: 1px solid color-mix(in srgb, var(--nova-text) 20%, transparent);
+      background: var(--ted-theater-surface);
+      border: 1px solid color-mix(in srgb, var(--ted-theater-text) 20%, transparent);
       border-radius: 50%;
       box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
       height: 22px;
@@ -1062,7 +1065,7 @@ export class NovastarHSeriesCard extends LitElement {
     .content {
       display: flex;
       flex-direction: column;
-      gap: var(--nova-gap);
+      gap: var(--ted-theater-gap);
       padding: 16px;
     }
 
@@ -1084,13 +1087,13 @@ export class NovastarHSeriesCard extends LitElement {
     }
 
     .label {
-      color: var(--nova-muted);
+      color: var(--ted-theater-muted);
       font-size: 0.95rem;
       font-weight: 500;
     }
 
     .value {
-      color: var(--nova-text);
+      color: var(--ted-theater-text);
       font-weight: 600;
       text-align: right;
       text-transform: capitalize;
@@ -1098,7 +1101,7 @@ export class NovastarHSeriesCard extends LitElement {
 
     .status-value {
       align-items: center;
-      border-radius: var(--nova-radius-sm);
+      border-radius: var(--ted-theater-radius-sm);
       display: inline-flex;
       font-size: 0.85rem;
       gap: 6px;
@@ -1107,13 +1110,13 @@ export class NovastarHSeriesCard extends LitElement {
     }
 
     .status-value--on {
-      background: color-mix(in srgb, var(--nova-success) 16%, transparent);
-      color: color-mix(in srgb, var(--nova-success) 78%, var(--nova-text));
+      background: color-mix(in srgb, var(--ted-theater-success) 16%, transparent);
+      color: color-mix(in srgb, var(--ted-theater-success) 78%, var(--ted-theater-text));
     }
 
     .status-value--off {
-      background: color-mix(in srgb, var(--nova-muted) 16%, transparent);
-      color: var(--nova-muted);
+      background: color-mix(in srgb, var(--ted-theater-muted) 16%, transparent);
+      color: var(--ted-theater-muted);
     }
 
     .input-row {
@@ -1128,7 +1131,7 @@ export class NovastarHSeriesCard extends LitElement {
     }
 
     .preset-heading {
-      color: var(--nova-muted);
+      color: var(--ted-theater-muted);
       font-size: 0.95rem;
       font-weight: 500;
     }
@@ -1142,10 +1145,10 @@ export class NovastarHSeriesCard extends LitElement {
     .preset-button {
       align-items: flex-start;
       aspect-ratio: 1 / 1;
-      background: var(--nova-surface-2);
-      border: 1px solid var(--nova-divider);
-      border-radius: var(--nova-radius-sm);
-      color: var(--nova-text);
+      background: var(--ted-theater-surface-2);
+      border: 1px solid var(--ted-theater-divider);
+      border-radius: var(--ted-theater-radius-sm);
+      color: var(--ted-theater-text);
       cursor: pointer;
       display: flex;
       flex-direction: column;
@@ -1163,7 +1166,7 @@ export class NovastarHSeriesCard extends LitElement {
     }
 
     .preset-button:hover {
-      border-color: color-mix(in srgb, var(--nova-accent) 50%, var(--nova-divider));
+      border-color: color-mix(in srgb, var(--ted-theater-accent) 50%, var(--ted-theater-divider));
     }
 
     .preset-button:active {
@@ -1171,15 +1174,15 @@ export class NovastarHSeriesCard extends LitElement {
     }
 
     .preset-button:focus-visible {
-      outline: 2px solid var(--nova-accent);
+      outline: 2px solid var(--ted-theater-accent);
       outline-offset: 2px;
     }
 
     .preset-button--active {
-      background: var(--nova-accent);
-      border-color: color-mix(in srgb, var(--nova-accent) 60%, #ffffff);
-      box-shadow: 0 2px 10px color-mix(in srgb, var(--nova-accent) 35%, transparent);
-      color: var(--nova-on-accent);
+      background: var(--ted-theater-accent);
+      border-color: color-mix(in srgb, var(--ted-theater-accent) 60%, #ffffff);
+      box-shadow: 0 2px 10px color-mix(in srgb, var(--ted-theater-accent) 35%, transparent);
+      color: var(--ted-theater-on-accent);
     }
 
     .preset-button:disabled {
@@ -1189,12 +1192,12 @@ export class NovastarHSeriesCard extends LitElement {
 
     .preset-button--more {
       align-items: center;
-      color: var(--nova-muted);
+      color: var(--ted-theater-muted);
       justify-content: center;
     }
 
     .preset-button--more:hover {
-      color: var(--nova-text);
+      color: var(--ted-theater-text);
     }
 
     .preset-more-icon {
@@ -1205,20 +1208,20 @@ export class NovastarHSeriesCard extends LitElement {
 
     .brightness-control {
       align-items: center;
-      background: var(--nova-surface-2);
-      border: 1px solid var(--nova-divider);
-      border-radius: var(--nova-radius-sm);
+      background: var(--ted-theater-surface-2);
+      border: 1px solid var(--ted-theater-divider);
+      border-radius: var(--ted-theater-radius-sm);
       box-sizing: border-box;
       display: flex;
       flex: 1 1 auto;
       gap: 12px;
-      min-height: var(--nova-touch);
+      min-height: var(--ted-theater-touch);
       padding: 0 16px;
       width: 100%;
     }
 
     .brightness-icon {
-      color: var(--nova-muted);
+      color: var(--ted-theater-muted);
       fill: currentColor;
       flex: none;
       height: 20px;
@@ -1226,7 +1229,7 @@ export class NovastarHSeriesCard extends LitElement {
     }
 
     .brightness-value {
-      color: var(--nova-text);
+      color: var(--ted-theater-text);
       flex: none;
       font-size: 0.9rem;
       font-weight: 600;
@@ -1240,7 +1243,7 @@ export class NovastarHSeriesCard extends LitElement {
       background: transparent;
       box-sizing: border-box;
       flex: 1 1 auto;
-      height: var(--nova-touch);
+      height: var(--ted-theater-touch);
       margin: 0;
       width: 100%;
     }
@@ -1248,20 +1251,20 @@ export class NovastarHSeriesCard extends LitElement {
     .brightness-slider::-webkit-slider-runnable-track {
       background: linear-gradient(
         to right,
-        var(--nova-accent) 0%,
-        var(--nova-accent) var(--nova-brightness-fill, 50%),
-        color-mix(in srgb, var(--nova-text) 18%, transparent) var(--nova-brightness-fill, 50%),
-        color-mix(in srgb, var(--nova-text) 18%, transparent) 100%
+        var(--ted-theater-accent) 0%,
+        var(--ted-theater-accent) var(--ted-theater-brightness-fill, 50%),
+        color-mix(in srgb, var(--ted-theater-text) 18%, transparent) var(--ted-theater-brightness-fill, 50%),
+        color-mix(in srgb, var(--ted-theater-text) 18%, transparent) 100%
       );
-      border-radius: var(--nova-pill);
+      border-radius: var(--ted-theater-pill);
       height: 6px;
     }
 
     .brightness-slider::-webkit-slider-thumb {
       -webkit-appearance: none;
       appearance: none;
-      background: var(--nova-surface);
-      border: 1px solid color-mix(in srgb, var(--nova-text) 20%, transparent);
+      background: var(--ted-theater-surface);
+      border: 1px solid color-mix(in srgb, var(--ted-theater-text) 20%, transparent);
       border-radius: 50%;
       box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
       height: 22px;
@@ -1270,20 +1273,20 @@ export class NovastarHSeriesCard extends LitElement {
     }
 
     .brightness-slider::-moz-range-track {
-      background: color-mix(in srgb, var(--nova-text) 18%, transparent);
-      border-radius: var(--nova-pill);
+      background: color-mix(in srgb, var(--ted-theater-text) 18%, transparent);
+      border-radius: var(--ted-theater-pill);
       height: 6px;
     }
 
     .brightness-slider::-moz-range-progress {
-      background: var(--nova-accent);
-      border-radius: var(--nova-pill);
+      background: var(--ted-theater-accent);
+      border-radius: var(--ted-theater-pill);
       height: 6px;
     }
 
     .brightness-slider::-moz-range-thumb {
-      background: var(--nova-surface);
-      border: 1px solid color-mix(in srgb, var(--nova-text) 20%, transparent);
+      background: var(--ted-theater-surface);
+      border: 1px solid color-mix(in srgb, var(--ted-theater-text) 20%, transparent);
       border-radius: 50%;
       box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
       height: 22px;
@@ -1301,20 +1304,20 @@ export class NovastarHSeriesCard extends LitElement {
     }
 
     .layout-preview {
-      border-radius: var(--nova-radius-sm);
+      border-radius: var(--ted-theater-radius-sm);
       position: relative;
     }
 
     .layout-title {
-      color: var(--nova-muted);
+      color: var(--ted-theater-muted);
       font-size: 0.9rem;
       margin-bottom: 8px;
     }
 
     .layout-canvas {
-      background: var(--nova-screen);
-      border: 1px solid var(--nova-divider);
-      border-radius: var(--nova-radius-sm);
+      background: var(--ted-theater-screen);
+      border: 1px solid var(--ted-theater-divider);
+      border-radius: var(--ted-theater-radius-sm);
       display: block;
       width: 100%;
     }
@@ -1324,14 +1327,14 @@ export class NovastarHSeriesCard extends LitElement {
     }
 
     .layout-screen {
-      fill: var(--nova-screen);
-      stroke: color-mix(in srgb, var(--nova-text) 22%, #3a3a3a);
+      fill: var(--ted-theater-screen);
+      stroke: color-mix(in srgb, var(--ted-theater-text) 22%, #3a3a3a);
     }
 
     .layout-layer {
-      fill: var(--nova-layer);
+      fill: var(--ted-theater-layer);
       fill-opacity: 1;
-      stroke: color-mix(in srgb, var(--nova-accent) 55%, #8893a0);
+      stroke: color-mix(in srgb, var(--ted-theater-accent) 55%, #8893a0);
     }
 
     .layout-layer-hitbox {
@@ -1339,7 +1342,7 @@ export class NovastarHSeriesCard extends LitElement {
     }
 
     .layout-label {
-      fill: var(--nova-text);
+      fill: var(--ted-theater-text);
       font-family: inherit;
       font-size: 9px;
       pointer-events: none;
@@ -1363,17 +1366,17 @@ export class NovastarHSeriesCard extends LitElement {
     }
 
     .version-footer {
-      color: var(--nova-muted);
+      color: var(--ted-theater-muted);
       font-size: 0.72rem;
       letter-spacing: 0.02em;
       opacity: 0.7;
       text-align: right;
     }
 
-    .nova-popover {
-      background: var(--nova-surface);
-      border: 1px solid var(--nova-divider);
-      border-radius: var(--nova-radius-sm);
+    .ted-popover {
+      background: var(--ted-theater-surface);
+      border: 1px solid var(--ted-theater-divider);
+      border-radius: var(--ted-theater-radius-sm);
       box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
       box-sizing: border-box;
       inset: auto;
@@ -1384,30 +1387,30 @@ export class NovastarHSeriesCard extends LitElement {
       position: fixed;
     }
 
-    .nova-popover::backdrop {
+    .ted-popover::backdrop {
       background: transparent;
     }
 
-    .nova-popover-title {
-      color: var(--nova-muted);
+    .ted-popover-title {
+      color: var(--ted-theater-muted);
       font-size: 0.8rem;
       font-weight: 600;
       padding: 4px 8px 8px;
     }
 
-    .nova-popover-options {
+    .ted-popover-options {
       display: grid;
       gap: 6px;
       max-height: min(50vh, 320px);
       overflow: auto;
     }
 
-    .nova-popover-option {
+    .ted-popover-option {
       align-items: center;
-      background: var(--nova-surface-2);
-      border: 1px solid var(--nova-divider);
-      border-radius: var(--nova-radius-sm);
-      color: var(--nova-text);
+      background: var(--ted-theater-surface-2);
+      border: 1px solid var(--ted-theater-divider);
+      border-radius: var(--ted-theater-radius-sm);
+      color: var(--ted-theater-text);
       cursor: pointer;
       display: flex;
       font: inherit;
@@ -1420,17 +1423,17 @@ export class NovastarHSeriesCard extends LitElement {
       width: 100%;
     }
 
-    .nova-popover-option:hover {
-      border-color: color-mix(in srgb, var(--nova-accent) 45%, var(--nova-divider));
+    .ted-popover-option:hover {
+      border-color: color-mix(in srgb, var(--ted-theater-accent) 45%, var(--ted-theater-divider));
     }
 
-    .nova-popover-option.selected {
-      background: color-mix(in srgb, var(--nova-accent) 14%, transparent);
-      border-color: var(--nova-accent);
-      box-shadow: inset 0 0 0 1px var(--nova-accent);
+    .ted-popover-option.selected {
+      background: color-mix(in srgb, var(--ted-theater-accent) 14%, transparent);
+      border-color: var(--ted-theater-accent);
+      box-shadow: inset 0 0 0 1px var(--ted-theater-accent);
     }
 
-    .nova-popover-option:disabled {
+    .ted-popover-option:disabled {
       opacity: 0.5;
       pointer-events: none;
     }
@@ -1759,17 +1762,17 @@ export class NovastarHSeriesCard extends LitElement {
 
     return html`
       <div
-        id="nova-layer-popover"
-        class="nova-popover"
+        id="ted-layer-popover"
+        class="ted-popover"
         popover
         @toggle=${this.handleLayerPopoverToggle}
       >
-        <div class="nova-popover-title">Layer ${chooser.layerNumber} Source</div>
-        <div class="nova-popover-options">
+        <div class="ted-popover-title">Layer ${chooser.layerNumber} Source</div>
+        <div class="ted-popover-options">
           ${chooser.options.map((option) => html`
             <button
               type="button"
-              class="nova-popover-option ${this.optionEquals(option, chooser.selectedOption) ? "selected" : ""}"
+              class="ted-popover-option ${this.optionEquals(option, chooser.selectedOption) ? "selected" : ""}"
               ?disabled=${powerFadeToBlack}
               @click=${() => this.handleLayerSourceModalOptionClick(option)}
             >${option}</button>
@@ -2671,7 +2674,7 @@ class NovastarHSeriesCardEditor extends LitElement {
 
     const data: NovastarCardConfig = {
       display_mode: "standard",
-      theme: "nova",
+      theme: "ted-style",
       ...this.config
     };
 
@@ -2727,7 +2730,7 @@ class NovastarHSeriesCardEditor extends LitElement {
           select: {
             mode: "dropdown",
             options: [
-              { value: "nova", label: "Nova (default)" },
+              { value: "ted-style", label: "Ted's Home Theater (default)" },
               { value: "ha", label: "Home Assistant theme" }
             ]
           }
@@ -2813,7 +2816,7 @@ class NovastarHSeriesCardEditor extends LitElement {
     if (nextConfig.display_mode === "standard") {
       delete nextConfig.display_mode;
     }
-    if (nextConfig.theme === "nova") {
+    if (nextConfig.theme === "ted-style") {
       delete nextConfig.theme;
     }
     if (nextConfig.show_header_in_compact !== true) {

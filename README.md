@@ -11,7 +11,7 @@ https://github.com/tedr91/HA-novastar-h
 ## Features
 
 - Polished, touch-friendly UI designed for wall-mounted control panels.
-- Two theme styles: a self-contained polished "nova" look (default) or follow your Home Assistant theme.
+- Two theme styles: a self-contained "Ted's Home Theater" look (default — a Windows 11 Fluent / Mica-dark style with a cyan accent) or follow your Home Assistant theme.
 - Three display modes: Detailed, Standard (default), and Compact.
 - Apple TV-style power button, tappable preset chips, and an inline brightness control.
 - Interactive screen layout preview with per-layer source selection.
@@ -44,7 +44,7 @@ type: module
 type: custom:novastar-h-series-card
 header: Novastar H Series
 display_mode: standard
-theme: nova
+theme: ted-style
 controller_entity: sensor.novastar_h_series_controller
 status_entity: sensor.novastar_h_series_status
 brightness_entity: sensor.novastar_h_series_brightness
@@ -61,7 +61,7 @@ temperature_entity: sensor.novastar_h_series_temperature
 - `compact`: layout visualization only.
 
 `theme` options:
-- `nova` (default): self-contained, polished dark appearance that looks the same regardless of your Home Assistant theme.
+- `ted-style` (default): self-contained "Ted's Home Theater" appearance — a Windows 11 Fluent (Mica-dark) style with a cyan accent and Segoe UI typography — that looks the same regardless of your Home Assistant theme.
 - `ha`: follow the active Home Assistant theme (accent color, surfaces, and corner radius).
 
 `show_header_in_compact` options:
