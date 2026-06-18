@@ -1,0 +1,775 @@
+import { LitElement, css, html, nothing } from "lit";
+
+import type { HomeAssistant } from "../../shared/types";
+import { NOVASTAR_CARD_EDITOR_TYPE } from "./const";
+import {
+  DEFAULT_SECTION_ORDER,
+  SECTION_DEFS,
+  orderSections,
+  type NovastarCardConfig,
+  type SectionId
+} from "./types";
+
+// True when the newer Web-Awesome `ha-dropdown` component is registered. Mirrors
+// Bubble Card's detection so the reorder menu uses the modern dropdown when
+// available and falls back to `ha-button-menu` on older Home Assistant.
+function supportsHaDropdown(): boolean {
+  try {
+    return typeof customElements !== "undefined" && customElements.get("ha-dropdown") !== undefined;
+  } catch {
+    return false;
+  }
+}
+
+const NOVASTAR_EDITOR_FIELD_LABELS: Record<string, string> = {
+  header: "Name",
+  display_mode: "Display mode",
+  theme: "Theme styling",
+  show_header_in_compact: "Show header in Compact mode",
+  show_card_version: "Show card version",
+  show_presets: "Show presets",
+  show_layout: "Show layout preview",
+  preset_order: "Preset order",
+  brushed: "Brushed effect",
+  screen_color: "Screen color",
+  screen_background_color: "Screen background color",
+  device_id: "Device",
+  power_entity: "Power entity",
+  preset_entity: "Preset selection entity",
+  screens_entity: "Screens entity",
+  layers_entity: "Layers entity",
+  controller_entity: "Controller entity",
+  status_entity: "Status entity",
+  brightness_entity: "Brightness entity",
+  temperature_entity: "Temperature entity"
+};
+
+class NovastarHSeriesCardEditor extends LitElement {
+  public hass?: HomeAssistant;
+
+  private config: NovastarCardConfig = {
+    type: "custom:novastar-h-series-card"
+  };
+  private attemptedAutoDeviceDefault = false;
+  private presetOptions: string[] = [];
+  private presetOptionsKey?: string;
+  private resolvedPresetEntityId?: string;
+  private resolvingPresetKey?: string;
+  private presetsResetNotice = false;
+  private expandedPanels: Record<string, boolean> = {};
+
+  static properties = {
+    hass: { attribute: false },
+    config: { attribute: false }
+  };
+
+  public setConfig(config: NovastarCardConfig): void {
+    const nextConfig: NovastarCardConfig = { ...config };
+    nextConfig.type ||= "custom:novastar-h-series-card";
+    this.config = nextConfig;
+    this.attemptedAutoDeviceDefault = false;
+  }
+
+  protected updated(): void {
+    void this.ensureDefaultDeviceId();
+    void this.ensurePresetOptions();
+    this.maybeResetStalePresetOrder();
+  }
+
+  protected render() {
+    if (!this.hass) {
+      return nothing;
+    }
+
+    const data: NovastarCardConfig = {
+      display_mode: "standard",
+      theme: "ted-style",
+      brushed: true,
+      show_presets: true,
+      show_layout: true,
+      ...this.config
+    };
+    const sectionOrder = orderSections(this.config.section_order);
+
+    return html`
+      <div class="editor">
+        <ha-form
+          .hass=${this.hass}
+          .data=${data}
+          .schema=${this.baseSchema()}
+          .computeLabel=${this.computeLabel}
+          @value-changed=${this.handleFormChanged}
+        ></ha-form>
+
+        ${this.renderGroup("visual", "Visual", "mdi:palette", false, html`
+          <ha-form
+            .hass=${this.hass}
+            .data=${data}
+            .schema=${this.visualSchema()}
+            .computeLabel=${this.computeLabel}
+            @value-changed=${this.handleFormChanged}
+          ></ha-form>
+        `)}
+
+        ${this.renderGroup("sections", "Card sections", "mdi:view-dashboard-outline", true, html`
+          <div class="section-list">
+            ${sectionOrder.map((id, index) => this.renderSectionRow(id, index, sectionOrder.length, data))}
+          </div>
+        `)}
+
+        ${this.renderGroup("advanced", "Advanced", "mdi:cog", false, html`
+          <ha-form
+            .hass=${this.hass}
+            .data=${data}
+            .schema=${this.advancedSchema()}
+            .computeLabel=${this.computeLabel}
+            @value-changed=${this.handleFormChanged}
+          ></ha-form>
+        `)}
+      </div>
+    `;
+  }
+
+  // A collapsible top-level group (Visual / Card sections / Advanced).
+  private renderGroup(key: string, title: string, icon: string, defaultExpanded: boolean, content: unknown) {
+    return html`
+      <ha-expansion-panel
+        outlined
+        .expanded=${this.isPanelExpanded(key, defaultExpanded)}
+        @expanded-changed=${(event: Event) => this.handlePanelToggle(key, event)}
+      >
+        <div slot="header" class="panel-header">
+          <ha-icon icon=${icon}></ha-icon>
+          <span>${title}</span>
+        </div>
+        <div class="panel-content">${content}</div>
+      </ha-expansion-panel>
+    `;
+  }
+
+  // One reorderable section row inside "Card sections".
+  private renderSectionRow(id: SectionId, index: number, total: number, data: NovastarCardConfig) {
+    const def = SECTION_DEFS.find((section) => section.id === id);
+    const key = `section-${id}`;
+    const settings = id === "presets"
+      ? this.presetsSectionContent(data)
+      : this.layoutSectionContent(data);
+
+    return html`
+      <ha-expansion-panel
+        outlined
+        .expanded=${this.isPanelExpanded(key, false)}
+        @expanded-changed=${(event: Event) => this.handlePanelToggle(key, event)}
+      >
+        <div slot="header" class="section-row-header">
+          <ha-icon icon=${def?.icon ?? "mdi:tune"}></ha-icon>
+          <span class="section-row-title">${def?.label ?? id}</span>
+          ${this.renderSectionMenu(id, index, total)}
+        </div>
+        <div class="panel-content">${settings}</div>
+      </ha-expansion-panel>
+    `;
+  }
+
+  // The three-dot reorder menu for a section row. Items stay hidden inside a
+  // popup until the trigger is clicked, matching Bubble Card's sub-button menu
+  // (ha-dropdown on newer HA, ha-button-menu + mwc-list-item as a fallback).
+  private renderSectionMenu(id: SectionId, index: number, total: number) {
+    const upDisabled = index === 0;
+    const downDisabled = index === total - 1;
+    const trigger = html`
+      <ha-icon-button slot="trigger" label="Reorder section">
+        <ha-icon icon="mdi:dots-vertical"></ha-icon>
+      </ha-icon-button>
+    `;
+
+    if (supportsHaDropdown()) {
+      return html`
+        <ha-dropdown
+          @click=${this.stopPropagation}
+          @closed=${this.stopPropagation}
+        >
+          ${trigger}
+          <ha-dropdown-item ?disabled=${upDisabled} @click=${() => this.moveSection(id, -1)}>
+            <ha-icon slot="icon" icon="mdi:arrow-up"></ha-icon>
+            Move up
+          </ha-dropdown-item>
+          <ha-dropdown-item ?disabled=${downDisabled} @click=${() => this.moveSection(id, 1)}>
+            <ha-icon slot="icon" icon="mdi:arrow-down"></ha-icon>
+            Move down
+          </ha-dropdown-item>
+        </ha-dropdown>
+      `;
+    }
+
+    return html`
+      <ha-button-menu
+        corner="BOTTOM_START"
+        menuCorner="START"
+        fixed
+        @click=${this.stopPropagation}
+        @closed=${this.stopPropagation}
+      >
+        ${trigger}
+        <mwc-list-item graphic="icon" ?disabled=${upDisabled} @click=${() => this.moveSection(id, -1)}>
+          <ha-icon slot="graphic" icon="mdi:arrow-up"></ha-icon>
+          Move up
+        </mwc-list-item>
+        <mwc-list-item graphic="icon" ?disabled=${downDisabled} @click=${() => this.moveSection(id, 1)}>
+          <ha-icon slot="graphic" icon="mdi:arrow-down"></ha-icon>
+          Move down
+        </mwc-list-item>
+      </ha-button-menu>
+    `;
+  }
+
+  private presetsSectionContent(data: NovastarCardConfig) {
+    const schema: Array<Record<string, unknown>> = [
+      { name: "show_presets", selector: { boolean: {} } }
+    ];
+    if (this.config.show_presets !== false && this.presetOptions.length > 0) {
+      schema.push({
+        name: "preset_order",
+        selector: {
+          select: {
+            multiple: true,
+            reorder: true,
+            options: this.presetOptions.map((preset) => ({ value: preset, label: preset }))
+          }
+        }
+      });
+    }
+    return html`
+      <ha-form
+        .hass=${this.hass}
+        .data=${data}
+        .schema=${schema}
+        .computeLabel=${this.computeLabel}
+        .computeHelper=${this.computeHelper}
+        @value-changed=${this.handleFormChanged}
+      ></ha-form>
+    `;
+  }
+
+  private layoutSectionContent(data: NovastarCardConfig) {
+    const schema: Array<Record<string, unknown>> = [
+      { name: "show_layout", selector: { boolean: {} } }
+    ];
+    return html`
+      <ha-form
+        .hass=${this.hass}
+        .data=${data}
+        .schema=${schema}
+        .computeLabel=${this.computeLabel}
+        @value-changed=${this.handleFormChanged}
+      ></ha-form>
+    `;
+  }
+
+  private baseSchema(): Array<Record<string, unknown>> {
+    return [
+      { name: "header", selector: { text: { placeholder: "Novastar H Series" } } },
+      {
+        name: "device_id",
+        selector: { device: { filter: { integration: "novastar_h" } } }
+      }
+    ];
+  }
+
+  private visualSchema(): Array<Record<string, unknown>> {
+    return [
+      {
+        name: "display_mode",
+        required: true,
+        selector: {
+          select: {
+            mode: "dropdown",
+            options: [
+              { value: "detailed", label: "Detailed" },
+              { value: "standard", label: "Standard" },
+              { value: "compact", label: "Compact" }
+            ]
+          }
+        }
+      },
+      {
+        name: "theme",
+        required: true,
+        selector: {
+          select: {
+            mode: "dropdown",
+            options: [
+              { value: "ted-style", label: "Ted's Home Theater (default)" },
+              { value: "ha", label: "Home Assistant theme" }
+            ]
+          }
+        }
+      },
+      {
+        name: "brushed",
+        selector: { boolean: {} }
+      },
+      {
+        name: "screen_color",
+        selector: { ui_color: {} }
+      },
+      {
+        name: "screen_background_color",
+        selector: { ui_color: {} }
+      }
+    ];
+  }
+
+  private advancedSchema(): Array<Record<string, unknown>> {
+    const displayMode = this.config.display_mode ?? "standard";
+    const hasOverride = Boolean(
+      this.config.power_entity
+      || this.config.preset_entity
+      || this.config.screens_entity
+      || this.config.layers_entity
+      || this.config.controller_entity
+      || this.config.status_entity
+      || this.config.brightness_entity
+      || this.config.temperature_entity
+    );
+
+    const schema: Array<Record<string, unknown>> = [];
+
+    if (displayMode === "compact") {
+      schema.push({ name: "show_header_in_compact", selector: { boolean: {} } });
+    }
+
+    if (displayMode === "detailed") {
+      schema.push({ name: "show_card_version", selector: { boolean: {} } });
+    }
+
+    schema.push({
+      name: "",
+      type: "expandable",
+      title: "Override entities",
+      flatten: true,
+      expanded: hasOverride,
+      schema: [
+        { name: "power_entity", selector: { entity: {} } },
+        { name: "preset_entity", selector: { entity: {} } },
+        { name: "screens_entity", selector: { entity: {} } },
+        { name: "layers_entity", selector: { entity: {} } },
+        { name: "controller_entity", selector: { entity: {} } },
+        { name: "status_entity", selector: { entity: {} } },
+        { name: "brightness_entity", selector: { entity: {} } },
+        { name: "temperature_entity", selector: { entity: {} } }
+      ]
+    });
+
+    return schema;
+  }
+
+  private computeLabel = (schema: { name: string }): string => {
+    return NOVASTAR_EDITOR_FIELD_LABELS[schema.name] ?? schema.name;
+  };
+
+  private computeHelper = (schema: { name: string }): string => {
+    if (schema.name !== "preset_order") {
+      return "";
+    }
+
+    if (this.presetOptions.length === 0) {
+      return "Select a device to load its presets.";
+    }
+
+    const base = "Drag to reorder. Remove a preset to hide it. Clear the field to show every preset again.";
+    return this.presetsResetNotice
+      ? `Presets changed on the device, so your custom order was reset. ${base}`
+      : base;
+  };
+
+  private handleFormChanged = (event: CustomEvent<{ value: NovastarCardConfig }>): void => {
+    event.stopPropagation();
+    this.commitConfig({ ...event.detail.value });
+  };
+
+  private stopPropagation = (event: Event): void => {
+    event.stopPropagation();
+  };
+
+  private isPanelExpanded(key: string, defaultExpanded: boolean): boolean {
+    return key in this.expandedPanels ? this.expandedPanels[key] : defaultExpanded;
+  }
+
+  private handlePanelToggle(key: string, event: Event): void {
+    const expanded = (event.target as { expanded?: boolean } | null)?.expanded;
+    if (typeof expanded === "boolean") {
+      this.expandedPanels = { ...this.expandedPanels, [key]: expanded };
+    }
+  }
+
+  private moveSection(id: SectionId, direction: -1 | 1): void {
+    const order = orderSections(this.config.section_order);
+    const index = order.indexOf(id);
+    const target = index + direction;
+    if (index < 0 || target < 0 || target >= order.length) {
+      return;
+    }
+    const next = [...order];
+    [next[index], next[target]] = [next[target], next[index]];
+    this.commitConfig({ ...this.config, section_order: next });
+  }
+
+  // Normalize a candidate config (strip defaults/empties), reconcile the preset
+  // order, store it, and notify HA. Shared by every editor form and by the
+  // section reorder menu.
+  private commitConfig(rawConfig: NovastarCardConfig): void {
+    const nextConfig: NovastarCardConfig = { ...rawConfig };
+    nextConfig.type = "custom:novastar-h-series-card";
+
+    if (nextConfig.display_mode === "standard") {
+      delete nextConfig.display_mode;
+    }
+    if (nextConfig.theme === "ted-style") {
+      delete nextConfig.theme;
+    }
+    if (nextConfig.show_header_in_compact !== true) {
+      delete nextConfig.show_header_in_compact;
+    }
+    if (nextConfig.show_card_version !== true) {
+      delete nextConfig.show_card_version;
+    }
+    if (nextConfig.show_presets !== false) {
+      delete nextConfig.show_presets;
+    }
+    if (nextConfig.show_layout !== false) {
+      delete nextConfig.show_layout;
+    }
+    if (nextConfig.brushed !== false) {
+      delete nextConfig.brushed;
+    }
+    if (
+      !Array.isArray(nextConfig.section_order)
+      || this.listSequenceEqual(orderSections(nextConfig.section_order), DEFAULT_SECTION_ORDER)
+    ) {
+      delete nextConfig.section_order;
+    }
+
+    this.reconcilePresetOrder(nextConfig);
+
+    const optionalKeys: Array<keyof NovastarCardConfig> = [
+      "header",
+      "device_id",
+      "power_entity",
+      "preset_entity",
+      "screens_entity",
+      "layers_entity",
+      "controller_entity",
+      "status_entity",
+      "brightness_entity",
+      "temperature_entity"
+    ];
+    for (const key of optionalKeys) {
+      const value = nextConfig[key];
+      if (value === undefined || value === null || (typeof value === "string" && value.trim() === "")) {
+        delete nextConfig[key];
+      }
+    }
+
+    this.config = nextConfig;
+    this.requestUpdate();
+    this.dispatchEvent(
+      new CustomEvent("config-changed", {
+        detail: { config: nextConfig },
+        bubbles: true,
+        composed: true
+      })
+    );
+  }
+
+  private reconcilePresetOrder(nextConfig: NovastarCardConfig): void {
+    if (this.presetOptions.length === 0) {
+      // Device presets aren't loaded yet — preserve any existing config untouched.
+      if (Array.isArray(this.config.preset_order) && this.config.preset_order.length > 0) {
+        nextConfig.preset_order = this.config.preset_order;
+        if (Array.isArray(this.config.preset_baseline) && this.config.preset_baseline.length > 0) {
+          nextConfig.preset_baseline = this.config.preset_baseline;
+        } else {
+          delete nextConfig.preset_baseline;
+        }
+      } else {
+        delete nextConfig.preset_order;
+        delete nextConfig.preset_baseline;
+      }
+      return;
+    }
+
+    const normalized = this.normalizePresetOrder(nextConfig.preset_order);
+    if (normalized.length === 0 || this.listSequenceEqual(normalized, this.presetOptions)) {
+      // Empty (show all) or identical to device order — store nothing.
+      delete nextConfig.preset_order;
+      delete nextConfig.preset_baseline;
+    } else {
+      nextConfig.preset_order = normalized;
+      nextConfig.preset_baseline = [...this.presetOptions];
+    }
+    this.presetsResetNotice = false;
+  }
+
+  private normalizePresetOrder(value: unknown): string[] {
+    if (!Array.isArray(value)) {
+      return [];
+    }
+
+    const result: string[] = [];
+    const used = new Set<string>();
+    for (const item of value) {
+      if (typeof item !== "string") {
+        continue;
+      }
+
+      const normalizedItem = item.trim().toLowerCase();
+      const match = this.presetOptions.find((option) => option.trim().toLowerCase() === normalizedItem);
+      if (!match) {
+        continue;
+      }
+
+      const key = match.toLowerCase();
+      if (used.has(key)) {
+        continue;
+      }
+
+      used.add(key);
+      result.push(match);
+    }
+
+    return result;
+  }
+
+  private async ensurePresetOptions(): Promise<void> {
+    if (!this.hass) {
+      return;
+    }
+
+    const override = this.config.preset_entity?.trim() ?? "";
+    const deviceId = this.config.device_id?.trim() ?? "";
+    const key = `${override}|${deviceId}`;
+
+    if (key !== this.presetOptionsKey) {
+      this.presetOptionsKey = key;
+      this.resolvedPresetEntityId = override || undefined;
+
+      if (!override && deviceId && this.hass.callWS && this.resolvingPresetKey !== key) {
+        this.resolvingPresetKey = key;
+        try {
+          const registry = await this.hass.callWS({ type: "config/entity_registry/list" });
+          if (this.presetOptionsKey === key && Array.isArray(registry)) {
+            const entityIds = registry
+              .filter((entry) => {
+                if (!entry || typeof entry !== "object") {
+                  return false;
+                }
+
+                const item = entry as Record<string, unknown>;
+                return item.device_id === deviceId
+                  && !item.disabled_by
+                  && !item.hidden_by
+                  && typeof item.entity_id === "string";
+              })
+              .map((entry) => (entry as Record<string, unknown>).entity_id as string);
+
+            this.resolvedPresetEntityId = entityIds.find((id) => /_preset$/.test(id))
+              ?? entityIds.find((id) => id.startsWith("select."));
+          }
+        } catch {
+        } finally {
+          if (this.resolvingPresetKey === key) {
+            this.resolvingPresetKey = undefined;
+          }
+        }
+      }
+    }
+
+    const entityId = this.resolvedPresetEntityId;
+    const stateObj = entityId ? this.hass.states[entityId] : undefined;
+    const rawOptions = stateObj?.attributes?.options;
+    const options = Array.isArray(rawOptions)
+      ? rawOptions.filter((item): item is string => typeof item === "string")
+      : [];
+
+    if (!this.listSequenceEqual(options, this.presetOptions)) {
+      this.presetOptions = options;
+      this.requestUpdate();
+    }
+  }
+
+  private maybeResetStalePresetOrder(): void {
+    if (this.presetOptions.length === 0) {
+      return;
+    }
+
+    const order = this.config.preset_order;
+    const baseline = this.config.preset_baseline;
+    if (!Array.isArray(order) || order.length === 0) {
+      return;
+    }
+    if (!Array.isArray(baseline) || baseline.length === 0) {
+      return;
+    }
+    if (this.nameSetEqual(baseline, this.presetOptions)) {
+      return;
+    }
+
+    const nextConfig: NovastarCardConfig = { ...this.config, type: "custom:novastar-h-series-card" };
+    delete nextConfig.preset_order;
+    delete nextConfig.preset_baseline;
+    this.config = nextConfig;
+    this.presetsResetNotice = true;
+    this.requestUpdate();
+    this.dispatchEvent(
+      new CustomEvent("config-changed", {
+        detail: { config: nextConfig },
+        bubbles: true,
+        composed: true
+      })
+    );
+  }
+
+  private listSequenceEqual(left: string[], right: string[]): boolean {
+    return left.length === right.length && left.every((value, index) => value === right[index]);
+  }
+
+  private nameSetEqual(left: string[], right: string[]): boolean {
+    if (left.length !== right.length) {
+      return false;
+    }
+
+    const normalize = (list: string[]): string[] =>
+      list.map((item) => item.trim().toLowerCase()).sort();
+    const normalizedLeft = normalize(left);
+    const normalizedRight = normalize(right);
+    return normalizedLeft.every((value, index) => value === normalizedRight[index]);
+  }
+
+  private async ensureDefaultDeviceId(): Promise<void> {
+    if (this.attemptedAutoDeviceDefault || !this.hass?.callWS) {
+      return;
+    }
+
+    if (this.config.device_id?.trim()) {
+      this.attemptedAutoDeviceDefault = true;
+      return;
+    }
+
+    this.attemptedAutoDeviceDefault = true;
+
+    try {
+      const registry = await this.hass.callWS({ type: "config/entity_registry/list" });
+      if (!Array.isArray(registry)) {
+        return;
+      }
+
+      const firstNovastarDeviceId = registry
+        .filter((entry) => {
+          if (!entry || typeof entry !== "object") {
+            return false;
+          }
+
+          const item = entry as Record<string, unknown>;
+          return item.platform === "novastar_h"
+            && typeof item.device_id === "string"
+            && !item.disabled_by
+            && !item.hidden_by;
+        })
+        .map((entry) => (entry as Record<string, unknown>).device_id as string)[0];
+
+      if (!firstNovastarDeviceId) {
+        return;
+      }
+
+      const nextConfig: NovastarCardConfig = {
+        ...this.config,
+        type: "custom:novastar-h-series-card",
+        device_id: firstNovastarDeviceId
+      };
+      this.config = nextConfig;
+      this.requestUpdate();
+      this.dispatchEvent(
+        new CustomEvent("config-changed", {
+          detail: { config: nextConfig },
+          bubbles: true,
+          composed: true
+        })
+      );
+    } catch {
+    }
+  }
+
+  static styles = css`
+    .editor {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    ha-form {
+      display: block;
+    }
+
+    ha-expansion-panel {
+      --expansion-panel-content-padding: 0;
+      border-radius: 6px;
+    }
+
+    .panel-header {
+      align-items: center;
+      display: flex;
+      font-weight: 500;
+      gap: 10px;
+    }
+
+    .panel-header ha-icon {
+      color: var(--secondary-text-color);
+    }
+
+    .panel-content {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding: 12px 16px 16px;
+    }
+
+    .section-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .section-row-header {
+      align-items: center;
+      display: flex;
+      gap: 10px;
+      width: 100%;
+    }
+
+    .section-row-header ha-icon {
+      color: var(--secondary-text-color);
+      flex: none;
+    }
+
+    .section-row-title {
+      flex: 1 1 auto;
+      font-weight: 500;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .section-row-header ha-button-menu,
+    .section-row-header ha-dropdown {
+      flex: none;
+      margin: -8px 0;
+    }
+  `;
+}
+
+
+try {
+  customElements.define(NOVASTAR_CARD_EDITOR_TYPE, NovastarHSeriesCardEditor);
+} catch {
+}
