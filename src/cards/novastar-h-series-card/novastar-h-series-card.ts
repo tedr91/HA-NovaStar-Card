@@ -691,6 +691,9 @@ export class NovastarHSeriesCard extends LitElement {
       gap: var(--ted-style-gap);
       justify-content: space-between;
       padding: 16px 16px 4px;
+      /* Sit above the brushed sheen (z-index: -3) so it never blends onto the header. */
+      position: relative;
+      z-index: 1;
     }
 
     .header-lead {
@@ -957,6 +960,9 @@ export class NovastarHSeriesCard extends LitElement {
       flex-direction: column;
       gap: var(--ted-style-gap);
       padding: 16px;
+      /* Sit above the brushed sheen (z-index: -3) so it never blends onto the controls. */
+      position: relative;
+      z-index: 1;
     }
 
     .content--standard {
@@ -1035,7 +1041,9 @@ export class NovastarHSeriesCard extends LitElement {
     .preset-button {
       align-items: flex-start;
       aspect-ratio: 1 / 1;
-      background: var(--ted-style-surface-2);
+      /* Opaque base + themed tint so the brushed sheen can never show through the button. */
+      background-color: var(--ted-style-surface);
+      background-image: linear-gradient(var(--ted-style-surface-2), var(--ted-style-surface-2));
       border: 1px solid var(--ted-style-divider);
       border-radius: var(--ted-style-radius-sm);
       color: var(--ted-style-text);
