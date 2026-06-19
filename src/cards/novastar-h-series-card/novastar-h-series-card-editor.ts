@@ -103,11 +103,11 @@ class NovastarHSeriesCardEditor extends LitElement {
           @value-changed=${this.handleFormChanged}
         ></ha-form>
 
-        ${this.renderGroup("visual", "Visual", "mdi:palette", false, html`
+        ${this.renderGroup("appearance", "Appearance", "mdi:palette", false, html`
           <ha-form
             .hass=${this.hass}
             .data=${data}
-            .schema=${this.visualSchema()}
+            .schema=${this.appearanceSchema()}
             .computeLabel=${this.computeLabel}
             @value-changed=${this.handleFormChanged}
           ></ha-form>
@@ -132,7 +132,7 @@ class NovastarHSeriesCardEditor extends LitElement {
     `;
   }
 
-  // A collapsible top-level group (Visual / Card sections / Advanced).
+  // A collapsible top-level group (Appearance / Card sections / Advanced).
   private renderGroup(key: string, title: string, icon: string, defaultExpanded: boolean, content: unknown) {
     return html`
       <ha-expansion-panel
@@ -281,7 +281,7 @@ class NovastarHSeriesCardEditor extends LitElement {
     ];
   }
 
-  private visualSchema(): Array<Record<string, unknown>> {
+  private appearanceSchema(): Array<Record<string, unknown>> {
     return [
       {
         name: "display_mode",
