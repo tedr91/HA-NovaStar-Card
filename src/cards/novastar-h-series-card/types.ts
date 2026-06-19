@@ -11,6 +11,7 @@ export type NovastarCardConfig = {
   show_header_in_compact?: boolean;
   show_card_version?: boolean;
   show_presets?: boolean;
+  hide_presets_when_off?: boolean;
   show_layout?: boolean;
   section_order?: string[];
   preset_order?: string[];

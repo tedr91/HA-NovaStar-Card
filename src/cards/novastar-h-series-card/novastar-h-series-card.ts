@@ -229,9 +229,11 @@ export class NovastarHSeriesCard extends LitElement {
     const showPresets = this.config.show_presets !== false;
     const showLayout = this.config.show_layout !== false;
     const sectionOrder = orderSections(this.config.section_order);
+    const hidePresetsWhenOff = this.config.hide_presets_when_off !== false;
+    const presetsVisibleForPower = !hidePresetsWhenOff || !powerEntity || powerIsOn;
     const renderSection = (id: SectionId) => {
       if (id === "presets") {
-        return !isCompact && presetEntity && showPresets
+        return !isCompact && presetEntity && showPresets && presetsVisibleForPower
           ? this.renderPresetArea(visiblePresets, selectedPresetOption, powerFadeToBlack, isDetailed, presetEntity)
           : nothing;
       }

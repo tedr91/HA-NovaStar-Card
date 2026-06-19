@@ -80,6 +80,8 @@ temperature_entity: sensor.novastar_h_series_temperature
 - `true` (default): show the Presets section / Layout preview section on the card.
 - `false`: hide that section. In the visual editor each section has its own on/off toggle under **Card sections**.
 
+`hide_presets_when_off` (optional, default `true`): hide the Presets section while the power entity is off, so presets only appear when the device is on. Set to `false` to always show the presets regardless of power state. In the visual editor it appears as **Hide when device is off** directly below **Show presets**.
+
 `section_order` (optional): controls the order of the card's reorderable body sections (`presets` and `layout`). In the visual editor, open **Card sections**, then use the three-dot menu on a section row to **Move up** / **Move down**. The same order is used in Detailed and Standard modes (the Detailed-mode status/temperature/brightness rows stay pinned at the top and the version footer stays at the bottom). Leave it unset to use the default order (presets, then layout). You can also set it directly in YAML, e.g. `section_order: [layout, presets]`.
 
 `screen_color` and `screen_background_color` (optional): customize the layout preview colors. `screen_color` sets the layer tone and `screen_background_color` sets the screen backdrop. Each accepts a Home Assistant theme color name (e.g. `blue`) or a hex value (e.g. `#202733`); leave unset to use the defaults. Both are most easily set with the color pickers in the visual editor.

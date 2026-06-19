@@ -28,6 +28,7 @@ const NOVASTAR_EDITOR_FIELD_LABELS: Record<string, string> = {
   show_header_in_compact: "Show header in Compact mode",
   show_card_version: "Show card version",
   show_presets: "Show presets",
+  hide_presets_when_off: "Hide when device is off",
   show_layout: "Show layout preview",
   preset_order: "Preset order",
   brushed: "Brushed effect",
@@ -86,6 +87,7 @@ class NovastarHSeriesCardEditor extends LitElement {
       theme: "ted-style",
       brushed: true,
       show_presets: true,
+      hide_presets_when_off: true,
       show_layout: true,
       ...this.config
     };
@@ -227,6 +229,9 @@ class NovastarHSeriesCardEditor extends LitElement {
     const schema: Array<Record<string, unknown>> = [
       { name: "show_presets", selector: { boolean: {} } }
     ];
+    if (this.config.show_presets !== false) {
+      schema.push({ name: "hide_presets_when_off", selector: { boolean: {} } });
+    }
     if (this.config.show_presets !== false && this.presetOptions.length > 0) {
       schema.push({
         name: "preset_order",
@@ -436,6 +441,9 @@ class NovastarHSeriesCardEditor extends LitElement {
     }
     if (nextConfig.show_presets !== false) {
       delete nextConfig.show_presets;
+    }
+    if (nextConfig.hide_presets_when_off !== false) {
+      delete nextConfig.hide_presets_when_off;
     }
     if (nextConfig.show_layout !== false) {
       delete nextConfig.show_layout;
