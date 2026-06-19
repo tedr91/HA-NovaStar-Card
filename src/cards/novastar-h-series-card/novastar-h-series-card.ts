@@ -730,7 +730,7 @@ export class NovastarHSeriesCard extends LitElement {
 
     .status-dot--on {
       background: var(--ted-style-success);
-      box-shadow: 0 0 8px color-mix(in srgb, var(--ted-style-success) 70%, transparent);
+      box-shadow: 0 0 4px color-mix(in srgb, var(--ted-style-success) 22%, transparent);
     }
 
     .status-dot--off {
