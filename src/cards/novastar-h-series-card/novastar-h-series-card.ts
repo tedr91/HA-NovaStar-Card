@@ -794,18 +794,20 @@ export class NovastarHSeriesCard extends LitElement {
       width: 16px;
     }
 
+    /* ON: a glowing ring only — background and icon color stay constant. */
     .power-button--on {
-      background:
-        radial-gradient(circle at 30% 26%,
-          color-mix(in srgb, var(--ted-style-accent) 76%, #ffffff) 8%,
-          color-mix(in srgb, var(--ted-style-accent) 90%, #000000) 100%);
-      border-color: color-mix(in srgb, var(--ted-style-accent) 55%, #ffffff);
+      background: var(--ted-style-surface-2);
+      border-color: var(--ted-style-success);
       box-shadow:
-        0 0 0 1px color-mix(in srgb, var(--ted-style-accent) 35%, transparent),
-        0 0 16px color-mix(in srgb, var(--ted-style-accent) 38%, transparent),
-        0 2px 8px rgba(0, 0, 0, 0.28),
-        inset 0 1px 0 rgba(255, 255, 255, 0.28);
-      color: var(--ted-style-on-accent);
+        0 0 0 1px var(--ted-style-success),
+        0 0 4px color-mix(in srgb, var(--ted-style-success) 22%, transparent);
+    }
+
+    ha-card.ted-card--theme-ha .power-button--on {
+      border-color: var(--ted-style-accent);
+      box-shadow:
+        0 0 0 1px var(--ted-style-accent),
+        0 0 4px color-mix(in srgb, var(--ted-style-accent) 22%, transparent);
     }
 
     .header-actions {
