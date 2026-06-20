@@ -114,6 +114,14 @@ class NovastarHSeriesCardEditor extends LitElement {
         ></ha-form>
 
         ${this.renderGroup("appearance", "Appearance", "mdi:palette", false, html`
+          ${this.renderFieldWithToggle(
+            "header",
+            { text: {} },
+            this.config.header ?? "",
+            "Novastar H Series",
+            "show_name",
+            this.config.show_name !== false
+          )}
           <ha-form
             .hass=${this.hass}
             .data=${data}
@@ -121,7 +129,7 @@ class NovastarHSeriesCardEditor extends LitElement {
             .computeLabel=${this.computeLabel}
             @value-changed=${this.handleFormChanged}
           ></ha-form>
-          ${this.config.brand?.trim() === CUSTOM_BRAND_ID ? this.renderCustomLogoUploader() : nothing}
+          ${this.renderLogoControls(data)}
           <ha-form
             .hass=${this.hass}
             .data=${data}
@@ -299,16 +307,7 @@ class NovastarHSeriesCardEditor extends LitElement {
   }
 
   private brandSchema(): Array<Record<string, unknown>> {
-    const brandId = this.config.brand?.trim() ?? "";
-    const schema: Array<Record<string, unknown>> = [
-      {
-        name: "",
-        type: "grid",
-        schema: [
-          { name: "header", selector: { text: { placeholder: "Novastar H Series" } } },
-          { name: "show_name", selector: { boolean: {} } }
-        ]
-      },
+    return [
       {
         name: "brand",
         selector: {
@@ -323,31 +322,83 @@ class NovastarHSeriesCardEditor extends LitElement {
         }
       }
     ];
+  }
 
-    // Variants only apply to the built-in multi-layout brands, not a single
-    // custom image. Pair the style with the "Show logo" toggle on one line.
-    if (brandId && brandId !== CUSTOM_BRAND_ID) {
-      schema.push({
-        name: "",
-        type: "grid",
-        schema: [
-          {
-            name: "logo_variant",
-            selector: {
-              select: {
-                mode: "dropdown",
-                options: LOGO_VARIANT_OPTIONS.map((option) => ({ value: option.value, label: option.label }))
-              }
-            }
-          },
-          { name: "show_brand_logo", selector: { boolean: {} } }
-        ]
-      });
-    } else if (brandId === CUSTOM_BRAND_ID) {
-      schema.push({ name: "show_brand_logo", selector: { boolean: {} } });
+  // A wide field with a compact toggle on the same line (ha-form's grid only
+  // does equal columns, so this is hand-rendered with the same ha-selector
+  // component ha-form uses internally).
+  private renderFieldWithToggle(
+    fieldName: keyof NovastarCardConfig,
+    fieldSelector: Record<string, unknown>,
+    fieldValue: unknown,
+    placeholder: string,
+    toggleName: keyof NovastarCardConfig,
+    toggleValue: boolean
+  ) {
+    return html`
+      <div class="field-row">
+        <ha-selector
+          class="field-grow"
+          .hass=${this.hass}
+          .selector=${fieldSelector}
+          .label=${this.computeLabel({ name: fieldName })}
+          .placeholder=${placeholder}
+          .value=${fieldValue}
+          @value-changed=${(event: CustomEvent) => this.handleFieldChanged(fieldName, event)}
+        ></ha-selector>
+        <ha-selector
+          class="field-toggle"
+          .hass=${this.hass}
+          .selector=${{ boolean: {} }}
+          .label=${this.computeLabel({ name: toggleName })}
+          .value=${toggleValue}
+          @value-changed=${(event: CustomEvent) => this.handleFieldChanged(toggleName, event)}
+        ></ha-selector>
+      </div>
+    `;
+  }
+
+  // The logo style + "Show logo" controls below the brand selector. Built-in
+  // brands get the style dropdown with a compact toggle on the same line; the
+  // custom brand gets the uploader plus a standalone toggle.
+  private renderLogoControls(data: NovastarCardConfig) {
+    const brandId = this.config.brand?.trim() ?? "";
+    if (!brandId) {
+      return nothing;
     }
 
-    return schema;
+    if (brandId === CUSTOM_BRAND_ID) {
+      return html`
+        ${this.renderCustomLogoUploader()}
+        <ha-form
+          .hass=${this.hass}
+          .data=${data}
+          .schema=${[{ name: "show_brand_logo", selector: { boolean: {} } }]}
+          .computeLabel=${this.computeLabel}
+          @value-changed=${this.handleFormChanged}
+        ></ha-form>
+      `;
+    }
+
+    return this.renderFieldWithToggle(
+      "logo_variant",
+      {
+        select: {
+          mode: "dropdown",
+          options: LOGO_VARIANT_OPTIONS.map((option) => ({ value: option.value, label: option.label }))
+        }
+      },
+      this.config.logo_variant ?? DEFAULT_LOGO_VARIANT,
+      "",
+      "show_brand_logo",
+      this.config.show_brand_logo !== false
+    );
+  }
+
+  private handleFieldChanged(name: keyof NovastarCardConfig, event: CustomEvent): void {
+    event.stopPropagation();
+    const value = (event.detail as { value?: unknown }).value;
+    this.commitConfig({ ...this.config, [name]: value } as NovastarCardConfig);
   }
 
   private appearanceRestSchema(): Array<Record<string, unknown>> {
@@ -948,6 +999,21 @@ class NovastarHSeriesCardEditor extends LitElement {
     .section-row-header ha-dropdown {
       flex: none;
       margin: -8px 0;
+    }
+
+    .field-row {
+      align-items: center;
+      display: flex;
+      gap: 16px;
+    }
+
+    .field-grow {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+
+    .field-toggle {
+      flex: 0 0 auto;
     }
 
     .custom-logo {
