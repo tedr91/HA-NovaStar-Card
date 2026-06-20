@@ -269,7 +269,9 @@ export class NovastarHSeriesCard extends LitElement {
               <div class="header-row">
                 <div class="header-lead">
                   ${this.renderBrandLogo()}
-                  <div class="header">${headerText}</div>
+                  ${this.config.show_name !== false
+                    ? html`<div class="header">${headerText}</div>`
+                    : nothing}
                 </div>
                 <div class="header-actions">
                   ${showStatusSection

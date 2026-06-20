@@ -24,9 +24,10 @@ function supportsHaDropdown(): boolean {
 
 const NOVASTAR_EDITOR_FIELD_LABELS: Record<string, string> = {
   header: "Name",
+  show_name: "Show name",
   brand: "Brand",
   logo_variant: "Logo style",
-  show_brand_logo: "Show brand logo",
+  show_brand_logo: "Show logo",
   display_mode: "Display mode",
   theme: "Theme styling",
   show_header_in_compact: "Show header in Compact mode",
@@ -97,6 +98,7 @@ class NovastarHSeriesCardEditor extends LitElement {
       show_layout: true,
       logo_variant: DEFAULT_LOGO_VARIANT,
       show_brand_logo: true,
+      show_name: true,
       ...this.config
     };
     const sectionOrder = orderSections(this.config.section_order);
@@ -289,7 +291,6 @@ class NovastarHSeriesCardEditor extends LitElement {
 
   private baseSchema(): Array<Record<string, unknown>> {
     return [
-      { name: "header", selector: { text: { placeholder: "Novastar H Series" } } },
       {
         name: "device_id",
         selector: { device: { filter: { integration: "novastar_h" } } }
@@ -300,6 +301,14 @@ class NovastarHSeriesCardEditor extends LitElement {
   private brandSchema(): Array<Record<string, unknown>> {
     const brandId = this.config.brand?.trim() ?? "";
     const schema: Array<Record<string, unknown>> = [
+      {
+        name: "",
+        type: "grid",
+        schema: [
+          { name: "header", selector: { text: { placeholder: "Novastar H Series" } } },
+          { name: "show_name", selector: { boolean: {} } }
+        ]
+      },
       {
         name: "brand",
         selector: {
@@ -316,20 +325,25 @@ class NovastarHSeriesCardEditor extends LitElement {
     ];
 
     // Variants only apply to the built-in multi-layout brands, not a single
-    // custom image.
+    // custom image. Pair the style with the "Show logo" toggle on one line.
     if (brandId && brandId !== CUSTOM_BRAND_ID) {
       schema.push({
-        name: "logo_variant",
-        selector: {
-          select: {
-            mode: "dropdown",
-            options: LOGO_VARIANT_OPTIONS.map((option) => ({ value: option.value, label: option.label }))
-          }
-        }
+        name: "",
+        type: "grid",
+        schema: [
+          {
+            name: "logo_variant",
+            selector: {
+              select: {
+                mode: "dropdown",
+                options: LOGO_VARIANT_OPTIONS.map((option) => ({ value: option.value, label: option.label }))
+              }
+            }
+          },
+          { name: "show_brand_logo", selector: { boolean: {} } }
+        ]
       });
-    }
-
-    if (brandId) {
+    } else if (brandId === CUSTOM_BRAND_ID) {
       schema.push({ name: "show_brand_logo", selector: { boolean: {} } });
     }
 
@@ -365,17 +379,14 @@ class NovastarHSeriesCardEditor extends LitElement {
           }
         }
       },
+      { name: "brushed", selector: { boolean: {} } },
       {
-        name: "brushed",
-        selector: { boolean: {} }
-      },
-      {
-        name: "screen_color",
-        selector: { ui_color: {} }
-      },
-      {
-        name: "screen_background_color",
-        selector: { ui_color: {} }
+        name: "",
+        type: "grid",
+        schema: [
+          { name: "screen_color", selector: { ui_color: {} } },
+          { name: "screen_background_color", selector: { ui_color: {} } }
+        ]
       }
     ];
   }
@@ -584,6 +595,9 @@ class NovastarHSeriesCardEditor extends LitElement {
     }
     if (nextConfig.brushed !== false) {
       delete nextConfig.brushed;
+    }
+    if (nextConfig.show_name !== false) {
+      delete nextConfig.show_name;
     }
 
     const brandId = typeof nextConfig.brand === "string" ? nextConfig.brand.trim() : "";

@@ -10,6 +10,7 @@ export type LogoVariant = "mark" | "stacked" | "horizontal";
 export type NovastarCardConfig = {
   type: string;
   header?: string;
+  show_name?: boolean;
   brand?: string;
   logo_variant?: LogoVariant;
   custom_logo?: string;
