@@ -13,6 +13,7 @@ export type NovastarCardConfig = {
   show_name?: boolean;
   brand?: string;
   logo_variant?: LogoVariant;
+  logo_scale?: number;
   custom_logo?: string;
   show_brand_logo?: boolean;
   display_mode?: DisplayMode;

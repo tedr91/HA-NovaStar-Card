@@ -371,9 +371,11 @@ export class NovastarHSeriesCard extends LitElement {
   // The "Custom" brand instead renders a user-uploaded image via <img>.
   private renderBrandLogo() {
     const brandId = this.config?.brand?.trim();
-    if (!brandId || this.config?.show_brand_logo === false) {
+    if (!brandId) {
       return nothing;
     }
+
+    const scaleStyle = `--ted-logo-scale: ${this.getLogoScale()}`;
 
     if (brandId === CUSTOM_BRAND_ID) {
       const url = this.config?.custom_logo?.trim();
@@ -384,6 +386,7 @@ export class NovastarHSeriesCard extends LitElement {
         class="brand-logo brand-logo--custom"
         src=${url}
         alt=""
+        style=${scaleStyle}
         @error=${() => this.handleBrandLogoError(url)}
       />`;
     }
@@ -400,7 +403,18 @@ export class NovastarHSeriesCard extends LitElement {
       preserveAspectRatio="xMidYMid meet"
       role="img"
       aria-hidden="true"
+      style=${scaleStyle}
     ><path d=${art.path} fill="currentColor"></path></svg>`;
+  }
+
+  // Logo size multiplier from the configured percentage (default 100%),
+  // clamped to a sane range.
+  private getLogoScale(): number {
+    const pct = Number(this.config?.logo_scale);
+    if (!Number.isFinite(pct) || pct <= 0) {
+      return 1;
+    }
+    return Math.min(3, Math.max(0.25, pct / 100));
   }
 
   private handleBrandLogoError(src: string): void {
@@ -762,6 +776,7 @@ export class NovastarHSeriesCard extends LitElement {
       color: var(--ted-style-text);
       display: block;
       flex: none;
+      height: calc(var(--ted-logo-base, 26px) * var(--ted-logo-scale, 1));
       width: auto;
     }
 
@@ -770,19 +785,19 @@ export class NovastarHSeriesCard extends LitElement {
     }
 
     .brand-logo--mark {
-      height: 26px;
+      --ted-logo-base: 26px;
     }
 
     .brand-logo--stacked {
-      height: 40px;
+      --ted-logo-base: 40px;
     }
 
     .brand-logo--horizontal {
-      height: 26px;
+      --ted-logo-base: 26px;
     }
 
     .brand-logo--custom {
-      height: 28px;
+      --ted-logo-base: 28px;
     }
 
     .header-status {
