@@ -2,9 +2,18 @@ import type { HassEntity, ThemeMode } from "../../shared/types";
 
 export type DisplayMode = "detailed" | "standard" | "compact";
 
+// Brand logo layout variants. Each maps to a file base name on the HA server
+// (see brands.ts). `mark` = logo only, `stacked` = logo with the brand name
+// below it, `horizontal` = logo with the brand name to its right.
+export type LogoVariant = "mark" | "stacked" | "horizontal";
+
 export type NovastarCardConfig = {
   type: string;
   header?: string;
+  brand?: string;
+  logo_variant?: LogoVariant;
+  custom_logo?: string;
+  show_brand_logo?: boolean;
   display_mode?: DisplayMode;
   theme?: ThemeMode;
   brushed?: boolean;

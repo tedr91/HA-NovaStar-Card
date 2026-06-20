@@ -1,6 +1,7 @@
 import { LitElement, css, html, nothing } from "lit";
 
 import type { HomeAssistant } from "../../shared/types";
+import { BRANDS, CUSTOM_BRAND_ID, DEFAULT_LOGO_VARIANT, LOGO_VARIANT_OPTIONS } from "./brands";
 import { NOVASTAR_CARD_EDITOR_TYPE } from "./const";
 import {
   DEFAULT_SECTION_ORDER,
@@ -23,6 +24,9 @@ function supportsHaDropdown(): boolean {
 
 const NOVASTAR_EDITOR_FIELD_LABELS: Record<string, string> = {
   header: "Name",
+  brand: "Brand",
+  logo_variant: "Logo style",
+  show_brand_logo: "Show brand logo",
   display_mode: "Display mode",
   theme: "Theme styling",
   show_header_in_compact: "Show header in Compact mode",
@@ -57,6 +61,8 @@ class NovastarHSeriesCardEditor extends LitElement {
   private resolvedPresetEntityId?: string;
   private resolvingPresetKey?: string;
   private presetsResetNotice = false;
+  private customLogoUploading = false;
+  private customLogoError?: string;
   private expandedPanels: Record<string, boolean> = {};
 
   static properties = {
@@ -89,6 +95,8 @@ class NovastarHSeriesCardEditor extends LitElement {
       show_presets: true,
       hide_presets_when_off: true,
       show_layout: true,
+      logo_variant: DEFAULT_LOGO_VARIANT,
+      show_brand_logo: true,
       ...this.config
     };
     const sectionOrder = orderSections(this.config.section_order);
@@ -107,7 +115,15 @@ class NovastarHSeriesCardEditor extends LitElement {
           <ha-form
             .hass=${this.hass}
             .data=${data}
-            .schema=${this.appearanceSchema()}
+            .schema=${this.brandSchema()}
+            .computeLabel=${this.computeLabel}
+            @value-changed=${this.handleFormChanged}
+          ></ha-form>
+          ${this.config.brand?.trim() === CUSTOM_BRAND_ID ? this.renderCustomLogoUploader() : nothing}
+          <ha-form
+            .hass=${this.hass}
+            .data=${data}
+            .schema=${this.appearanceRestSchema()}
             .computeLabel=${this.computeLabel}
             @value-changed=${this.handleFormChanged}
           ></ha-form>
@@ -281,7 +297,46 @@ class NovastarHSeriesCardEditor extends LitElement {
     ];
   }
 
-  private appearanceSchema(): Array<Record<string, unknown>> {
+  private brandSchema(): Array<Record<string, unknown>> {
+    const brandId = this.config.brand?.trim() ?? "";
+    const schema: Array<Record<string, unknown>> = [
+      {
+        name: "brand",
+        selector: {
+          select: {
+            mode: "dropdown",
+            options: [
+              { value: "", label: "None" },
+              ...BRANDS.map((brand) => ({ value: brand.id, label: brand.label })),
+              { value: CUSTOM_BRAND_ID, label: "Custom (upload…)" }
+            ]
+          }
+        }
+      }
+    ];
+
+    // Variants only apply to the built-in multi-layout brands, not a single
+    // custom image.
+    if (brandId && brandId !== CUSTOM_BRAND_ID) {
+      schema.push({
+        name: "logo_variant",
+        selector: {
+          select: {
+            mode: "dropdown",
+            options: LOGO_VARIANT_OPTIONS.map((option) => ({ value: option.value, label: option.label }))
+          }
+        }
+      });
+    }
+
+    if (brandId) {
+      schema.push({ name: "show_brand_logo", selector: { boolean: {} } });
+    }
+
+    return schema;
+  }
+
+  private appearanceRestSchema(): Array<Record<string, unknown>> {
     return [
       {
         name: "display_mode",
@@ -324,6 +379,85 @@ class NovastarHSeriesCardEditor extends LitElement {
       }
     ];
   }
+
+  // Hand-rendered uploader (ha-form has no "upload -> URL string" selector).
+  // Uploads to Home Assistant's image store and saves the served URL.
+  private renderCustomLogoUploader() {
+    const url = this.config.custom_logo;
+    return html`
+      <div class="custom-logo">
+        ${url ? html`<img class="custom-logo-preview" src=${url} alt="Custom logo preview" />` : nothing}
+        <input
+          id="custom-logo-input"
+          class="custom-logo-input"
+          type="file"
+          accept="image/*"
+          @change=${this.handleCustomLogoUpload}
+        />
+        <div class="custom-logo-actions">
+          <button
+            type="button"
+            class="custom-logo-button"
+            ?disabled=${this.customLogoUploading}
+            @click=${this.openCustomLogoPicker}
+          >
+            <ha-icon icon="mdi:upload"></ha-icon>
+            <span>${this.customLogoUploading ? "Uploading…" : url ? "Replace image" : "Upload image"}</span>
+          </button>
+          ${url
+            ? html`<button type="button" class="custom-logo-button custom-logo-button--text" @click=${this.clearCustomLogo}>
+                Remove
+              </button>`
+            : nothing}
+        </div>
+        ${this.customLogoError ? html`<div class="custom-logo-error">${this.customLogoError}</div>` : nothing}
+        <div class="custom-logo-hint">Uploaded to Home Assistant — shows on all devices.</div>
+      </div>
+    `;
+  }
+
+  private openCustomLogoPicker = (): void => {
+    const input = this.shadowRoot?.getElementById("custom-logo-input") as HTMLInputElement | null;
+    input?.click();
+  };
+
+  private handleCustomLogoUpload = async (event: Event): Promise<void> => {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file || !this.hass?.fetchWithAuth) {
+      return;
+    }
+
+    this.customLogoUploading = true;
+    this.customLogoError = undefined;
+    this.requestUpdate();
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const response = await this.hass.fetchWithAuth("/api/image/upload", { method: "POST", body: formData });
+      if (!response.ok) {
+        throw new Error(`Upload failed (${response.status})`);
+      }
+      const data = (await response.json()) as { id?: string };
+      if (!data.id) {
+        throw new Error("Upload returned no image id");
+      }
+      this.commitConfig({ ...this.config, brand: CUSTOM_BRAND_ID, custom_logo: `/api/image/serve/${data.id}/original` });
+    } catch (err) {
+      this.customLogoError = err instanceof Error ? err.message : "Upload failed";
+    } finally {
+      this.customLogoUploading = false;
+      input.value = "";
+      this.requestUpdate();
+    }
+  };
+
+  private clearCustomLogo = (): void => {
+    const next = { ...this.config };
+    delete next.custom_logo;
+    this.commitConfig(next);
+  };
+
 
   private advancedSchema(): Array<Record<string, unknown>> {
     const displayMode = this.config.display_mode ?? "standard";
@@ -450,6 +584,34 @@ class NovastarHSeriesCardEditor extends LitElement {
     }
     if (nextConfig.brushed !== false) {
       delete nextConfig.brushed;
+    }
+
+    const brandId = typeof nextConfig.brand === "string" ? nextConfig.brand.trim() : "";
+    if (!brandId) {
+      // No brand selected: drop the brand and its dependent options.
+      delete nextConfig.brand;
+      delete nextConfig.logo_variant;
+      delete nextConfig.show_brand_logo;
+      delete nextConfig.custom_logo;
+    } else if (brandId === CUSTOM_BRAND_ID) {
+      // Custom uploaded image: a single image, so variants don't apply.
+      nextConfig.brand = brandId;
+      delete nextConfig.logo_variant;
+      if (nextConfig.show_brand_logo !== false) {
+        delete nextConfig.show_brand_logo;
+      }
+      if (typeof nextConfig.custom_logo !== "string" || !nextConfig.custom_logo.trim()) {
+        delete nextConfig.custom_logo;
+      }
+    } else {
+      nextConfig.brand = brandId;
+      delete nextConfig.custom_logo; // only used by the custom brand
+      if (nextConfig.logo_variant === DEFAULT_LOGO_VARIANT || !nextConfig.logo_variant) {
+        delete nextConfig.logo_variant;
+      }
+      if (nextConfig.show_brand_logo !== false) {
+        delete nextConfig.show_brand_logo;
+      }
     }
     if (
       !Array.isArray(nextConfig.section_order)
@@ -772,6 +934,65 @@ class NovastarHSeriesCardEditor extends LitElement {
     .section-row-header ha-dropdown {
       flex: none;
       margin: -8px 0;
+    }
+
+    .custom-logo {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .custom-logo-input {
+      display: none;
+    }
+
+    .custom-logo-preview {
+      align-self: flex-start;
+      background: var(--secondary-background-color);
+      border-radius: 6px;
+      max-height: 64px;
+      padding: 4px;
+      width: auto;
+    }
+
+    .custom-logo-actions {
+      align-items: center;
+      display: flex;
+      gap: 8px;
+    }
+
+    .custom-logo-button {
+      align-items: center;
+      background: var(--primary-color);
+      border: none;
+      border-radius: 6px;
+      color: var(--text-primary-color, #fff);
+      cursor: pointer;
+      display: inline-flex;
+      font: inherit;
+      gap: 6px;
+      padding: 8px 12px;
+    }
+
+    .custom-logo-button[disabled] {
+      cursor: default;
+      opacity: 0.6;
+    }
+
+    .custom-logo-button--text {
+      background: none;
+      color: var(--primary-color);
+      padding: 8px 4px;
+    }
+
+    .custom-logo-error {
+      color: var(--error-color, #db4437);
+      font-size: 0.85rem;
+    }
+
+    .custom-logo-hint {
+      color: var(--secondary-text-color);
+      font-size: 0.8rem;
     }
   `;
 }

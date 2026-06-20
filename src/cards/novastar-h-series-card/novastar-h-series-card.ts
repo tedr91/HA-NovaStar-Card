@@ -1,5 +1,6 @@
 import { LitElement, css, html, nothing, svg } from "lit";
 
+import { CUSTOM_BRAND_ID, DEFAULT_LOGO_VARIANT, getBrandArt } from "./brands";
 import { VERSION } from "../../shared/const";
 import { registerCustomCard } from "../../shared/register-card";
 import { brushedOverlay, tedStyleTheme } from "../../shared/theme";
@@ -16,6 +17,7 @@ import {
   type LayerSourceRow,
   type LayoutLayer,
   type LayoutPayload,
+  type LogoVariant,
   type NovastarCardConfig,
   type ResolvedEntityMap,
   type SectionId,
@@ -39,6 +41,7 @@ export class NovastarHSeriesCard extends LitElement {
   private presetChooserOpen = false;
   private presetAnchorRect?: DOMRect;
   private layerAnchorRect?: DOMRect;
+  private failedLogoSrcs = new Set<string>();
 
   static properties = {
     hass: { attribute: false, noAccessor: true },
@@ -265,6 +268,7 @@ export class NovastarHSeriesCard extends LitElement {
           ? html`
               <div class="header-row">
                 <div class="header-lead">
+                  ${this.renderBrandLogo()}
                   <div class="header">${headerText}</div>
                 </div>
                 <div class="header-actions">
@@ -356,6 +360,53 @@ export class NovastarHSeriesCard extends LitElement {
 
   private getThemeMode(): ThemeMode {
     return this.config?.theme === "ha" ? "ha" : "ted-style";
+  }
+
+  // Render the built-in brand logo to the left of the header name as inline
+  // monochrome SVG (see brands.ts / brands.art.ts). It recolors itself to the
+  // header text color via `currentColor`, so it adapts to light/dark themes
+  // with no extra files. Brands without generated art simply render nothing.
+  // The "Custom" brand instead renders a user-uploaded image via <img>.
+  private renderBrandLogo() {
+    const brandId = this.config?.brand?.trim();
+    if (!brandId || this.config?.show_brand_logo === false) {
+      return nothing;
+    }
+
+    if (brandId === CUSTOM_BRAND_ID) {
+      const url = this.config?.custom_logo?.trim();
+      if (!url || this.failedLogoSrcs.has(url)) {
+        return nothing;
+      }
+      return html`<img
+        class="brand-logo brand-logo--custom"
+        src=${url}
+        alt=""
+        @error=${() => this.handleBrandLogoError(url)}
+      />`;
+    }
+
+    const variant: LogoVariant = this.config?.logo_variant ?? DEFAULT_LOGO_VARIANT;
+    const art = getBrandArt(brandId, variant);
+    if (!art) {
+      return nothing;
+    }
+
+    return html`<svg
+      class="brand-logo brand-logo--${variant}"
+      viewBox="0 0 ${art.w} ${art.h}"
+      preserveAspectRatio="xMidYMid meet"
+      role="img"
+      aria-hidden="true"
+    ><path d=${art.path} fill="currentColor"></path></svg>`;
+  }
+
+  private handleBrandLogoError(src: string): void {
+    if (this.failedLogoSrcs.has(src)) {
+      return;
+    }
+    this.failedLogoSrcs.add(src);
+    this.requestUpdate();
   }
 
   private getTemperatureSeverity(state: string | undefined): "normal" | "warning" | "critical" | "unknown" {
@@ -703,6 +754,33 @@ export class NovastarHSeriesCard extends LitElement {
       display: inline-flex;
       gap: 10px;
       min-width: 0;
+    }
+
+    .brand-logo {
+      color: var(--ted-style-text);
+      display: block;
+      flex: none;
+      width: auto;
+    }
+
+    img.brand-logo {
+      object-fit: contain;
+    }
+
+    .brand-logo--mark {
+      height: 26px;
+    }
+
+    .brand-logo--stacked {
+      height: 40px;
+    }
+
+    .brand-logo--horizontal {
+      height: 26px;
+    }
+
+    .brand-logo--custom {
+      height: 28px;
     }
 
     .header-status {

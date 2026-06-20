@@ -14,6 +14,7 @@ export type HomeAssistant = {
   states: Record<string, HassEntity>;
   callService?: (domain: string, service: string, serviceData?: Record<string, unknown>) => Promise<void>;
   callWS?: (message: Record<string, unknown>) => Promise<unknown>;
+  fetchWithAuth?: (path: string, init?: RequestInit) => Promise<Response>;
 };
 
 /** Visual styling mode shared by all cards: `ted-style` = self-contained look; `ha` = follow HA theme. */
